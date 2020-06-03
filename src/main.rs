@@ -78,7 +78,7 @@ fn main() {
     
     let mut exitmap = HashMap::new();
     
-
+    
     let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap, entermap, exitmap);
     
     
@@ -248,49 +248,49 @@ pub struct PathfindingShape{
     
     //this shapes convex polygon
     shape: ConvexPolygon<f32>,
-
+    
     //map for this shape value to move through
     pathmap: HashMap<u32, f32>,
-
+    
     entermap: HashMap<u32, f32>,
-
+    
     exitmap: HashMap<u32, f32>,
-
-
+    
+    
     //each agent has a value for each other agent
     //the value to be at and the value to move through
-
+    
     //some objects you kinda dont need to move through
     //its not really about moving through them, its just about being at them
-
+    
     //like lava and fire and ice and hard to move through mud and shit
     //are hard to move through and mean a more signficant disadvantage to move through
     //signficant amounts of them rather than insignificant amounts of them
     //but some objects you kinda only care about interacting with
-
-
+    
+    
     //what about a cost to move through, a cost to enter, and a cost to exit for all objects
     //would i still NEED a "goal" value
-
-
+    
+    
     //not really
     //instead of a "goal" value for the chest, the chest would have a high "enter" value
     //so you want to enter it, and it would have a high "exit" value until the chest was opened
-
+    
     //and then when it was opened, the 
-
+    
     //i can replace everything with a high "goal" instead with having a low, negative "enter" value
     //and then a low "exit" value
     //and then when the thing about the shape makes it valueless again, it loses that high value to enter
     //and high value to leave
-
-
+    
+    
     //the cost to walk somewhere increases as the intensity of the situation increases, and teh amount of shit to do increases
-
-
-
-
-
+    
+    
+    
+    
+    
     
 }
 
@@ -315,7 +315,7 @@ pub struct PathfindingSegment{
     segment: Segment<f32>,
     
     leafid: DBVTLeafId,
-
+    
     evalmap: HashMap<u32, f32>,
     
 }
@@ -326,37 +326,37 @@ impl PathfindingSegment{
         
         PathfindingSegment{segment: thesegment, leafid: dbvtleafid, node1id: node1id, node2id: node2id, evalmap: evalmap}
     }
-
+    
     
     //given an evaluation map of an agent, return the cost that following this segment will cost
     // (or gain, it can be a positive value when its a goal node)
     fn getvalue(&self, agentevalmap: &HashMap<u32, f32> ) -> f32{
-
+        
         getevaluation(&self.evalmap, agentevalmap )
-
+        
     }
-
+    
     //given a nodeid of one of
-    fn getothernode(&self, thisnodeid: u32) -> u32{
-
-        if (thisnodeid == self.node1id){
-
+    fn getothernode(&self, thisnodeid: &u32) -> u32{
+        
+        if (*thisnodeid == self.node1id){
+            
             self.node2id
             
         }
-        else if ( thisnodeid == self.node2id ) {
-
+        else if ( *thisnodeid == self.node2id ) {
+            
             self.node1id
-
+            
         }
         else{
             panic!("this segment doesnt have this nodeid at all")
         }
-
-
+        
+        
     }
     
-
+    
 }
 
 
@@ -379,8 +379,8 @@ pub struct PathfindingNode{
     
     //a list of all ids of the segments that this node is on an end of
     attachedsegmentids: HashSet<u32>,
-
-
+    
+    
     
     
 }
@@ -557,156 +557,6 @@ impl Pathfinding{
         self.setconnections(nodeid);
     }
     
-    
-    //given a node
-    //get the highest value path for it as a list of points to visit
-    fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
-        
-        //given a node, i want to get all the nodes that are attached to it
-        //and i want to get all of the segments connected to that node
-        
-
-        //I NEED to figure out what the highest possible score of a node is
-        //because the path value is going to start at zero
-        //and its going to be kept adding to as it goes along new paths
-        //and i should always stop the program when the lowest node score
-        //is higher than the highest value path, because i know from then on
-        //all the new goal nodes reached are going to be too high value for me to
-        //go to
-        //basically, i should have a list of goalnodes reached
-        //that are the score when i arrived at them
-        //and i should only consider them, and add them to the goal nodes reached set
-        //if the value of that goalnode reached is higher than the pathvalue it takes to get to it
-
-
-        //for each node
-
-
-        //if the current pathvalue on reaching a node is less than zero, add it to the list of goalnodes reached
-        let mut goalnodesreached: HeapWithValue = HeapWithValue::new();
-
-        //this is the value that the path to the goalnode must have if i am to want to visit it
-        let minimummotivatingvalue = -1.0;
-
-        /*
-        WAIT, IVE MADE A PRETTY IMPORTANT MISTAKE
-        THE THING THAT MAKES A NODE WANT TO BE REACHED ISNT THE COST OF REACHING IT
-
-        ITS THE VALUE FROM GETTING TO IT - THE COST OF REACHING IT
-
-        like the GOAL of something is completely separate from the cost of getting to it
-
-        like, a negative pathvalue doesnt make much sense
-
-        the pathvalue should always be positive
-
-        and then to determine if a node is a node i want to go to, it should be
-        whether the evaluation for the shapeset that that node is in, is higher than
-        the value of the shapeset that im currently in
-
-        like its trying to reach better shapesets, and would be willing to go to better shapesets
-        if the cost of going to them is lower than the difference between that shapesets value - this shapesets value
-
-
-        */
-        
-        
-        //the set of nodes i have already visited
-        let mut visitednodes: HashSet<u32> = HashSet::new();
-        
-        
-        let mut tovisit : HeapWithValue = HeapWithValue::new();
-        
-        
-        
-        //the list of points to visit
-        let mut toreturn = Vec::new();
-        
-        
-        
-        //start the loop with the node passed in
-        let curnodeid = nodeid;
-        
-        
-        loop{
-            
-            //get the highest value node from set of nodes to visit
-            let (curpathvalue, curnodeid) = tovisit.pop();
-            
-            //if this node has already been visited
-            if (visitednodes.contains(&curnodeid) ){
-                
-                //i shouldnt do anything with this node
-                //just go on to the next one
-                
-            }
-            else
-            {
-                
-                //add it to the list of nodes visited
-                visitednodes.insert(curnodeid);
-                
-                
-                //get this current node
-                let curnode = self.nodemap.get(&curnodeid).unwrap();
-                
-                //get all the segments that are associated with it
-                let associatedsegmentids: HashSet<u32> = curnode.get_segment_ids();
-                
-                //for each of the assocaited segments
-                for cursegmentid in associatedsegmentids{
-
-                    let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
-
-                    let othernodeid = cursegment.getothernode(curnodeid);
-
-
-                    //make the node value to reach the current node value plus the value that will be given when
-                    //calling the getvalue method on this segment with the evalmap of the agent passed in
-                    //which will get what the value is with the segment evalmap + this agents evalmap
-                    let newpathvalue = curpathvalue + cursegment.getvalue( &evalmap );
-
-                    //ONLY RUN THIS IF THIS NEW PATH VALUE IS NOT ABOVE THE HIGHEST GOAL NODE VALUE
-                    {
-
-                        if (newpathvalue < minimummotivatingvalue){
-
-                            goalnodesreached.insert(newpathvalue, othernodeid);
-                        }
-
-                        tovisit.insert( newpathvalue, othernodeid );
-                    }
-
-                    //if this current node is a goal node, add it to the set of goal nodes reached + the value
-                    //that the goal node was reached at, so when theres no more nodes to visit anymore, we can
-                    //return the highest value path to which goalnode
-                    //(each goalnode can only be reached one highest-value way)
-                    //(this is about which goalnode is the highest value - the pathvalue required to reach it)
-                    
-                    
-                }
-                
-                
-            }
-            
-            break;
-            
-            
-            
-            
-            
-            
-        }
-        
-        
-        
-        
-        
-        
-        
-        toreturn
-        
-    }
     
     
     
@@ -1123,23 +973,23 @@ impl Pathfinding{
                 
                 //add this node to the node dbvt
                 let connectionleafid = self.connectiondbvt.insert(theleaf);
-
-
-
+                
+                
+                
                 //the total shapeset of all the shape shapesets combined
                 let mut connectionevalmap: HashMap<u32, f32> = HashMap::new();
-
+                
                 //get the shapeset that both of the nodes are in (because theyre in the same shapeset)
                 for curshapeid in self.shapesetmanager.getshapesetofnode(&nodeid){
-
+                    
                     //get the shape
                     let curshape = self.shapemap.get(&curshapeid).unwrap();
-
+                    
                     //add the shapesevalmap to the evalmap for this connection
-
+                    
                     addevalmaps(&mut connectionevalmap, &curshape.pathmap);
-
-
+                    
+                    
                 }
                 
                 
@@ -1295,16 +1145,503 @@ impl Pathfinding{
     
     
     
+    //given a node
+    //get the highest value path for it as a list of points to visit
+    /*
+    fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
+        
+        //the list of nodes
+        //and their lowest pathvalue
+        
+        //being unititialized is teh same as being -infinity
+        
+        
+        //the set of nodes i have already visited, in order of path score
+        //along with the node id, and the list of nodes that have already been visited along this path
+        let mut visitednodes: TreeDataStruct = TreeDataStruct::new();
+        
+        
+        //a branching tree of the paths taken stemming from the starting node
+        //go to the lowest cost node
+        //branch off from that node, the nodes that are connected if they have a lower cost
+        
+        
+        /*
+        the list of nodes that ive visited, their corresponding score, and the nodes that the path to this node has come from
+        is in some data structure:
+        
+        where to get to one
+        
+        */
+        
+        /*
+        the list of nodes visited
+        
+        
+        
+        */
+        
+        /*
+        the data struct I need:
+        
+        Get the lowest pathvalue node
+        get the list of nodes that are passed to get to this node with this pathvalue
+        
+        add a node into a struct along with its pathvalue, and the node that this path comes from
+        (a perfect algorithm would keep both paths, a faster algorithm would replace with the lower cost then delete higher cost)
+        */
+        
+        /*
+        
+        when getting the list of nodes, you just follow backwards the path of nodes, to see what nodes are visited
+        (i need this anyways, when getting the list of nodes to follow when i have the eventual path)
+        
+        so the data struct is a HeapWithValue
+        
+        but i have a second list of the nodes currently in teh HeapWithValue to the node their path and value came from
+        
+        
+        */
+        
+        
+        
+        //the list of nodes associated with their pathvalue
+        let mut tovisit : HeapWithValue = HeapWithValue::new();
+        
+        
+        
+        //the list of points to visit
+        let mut toreturn = Vec::new();
+        
+        
+        
+        //start the loop with the node passed in
+        let curnodeid = nodeid;
+        
+        
+        loop{
+            
+            //get the highest value node from set of nodes to visit
+            let (curpathvalue, curnodeid) = tovisit.pop();
+            
+            //if this node has already been visited
+            if (visitednodes.contains(&curnodeid) ){
+                
+                //i shouldnt do anything with this node
+                //just go on to the next one
+                
+            }
+            else
+            {
+                
+                //add it to the list of nodes visited
+                visitednodes.insert(curnodeid);
+                
+                
+                //get this current node
+                let curnode = self.nodemap.get(&curnodeid).unwrap();
+                
+                //get all the segments that are associated with it
+                let associatedsegmentids: HashSet<u32> = curnode.get_segment_ids();
+                
+                //for each of the assocaited segments
+                for cursegmentid in associatedsegmentids{
+                    
+                    let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
+                    
+                    let othernodeid = cursegment.getothernode(curnodeid);
+                    
+                    
+                    //make the node value to reach the current node value plus the value that will be given when
+                    //calling the getvalue method on this segment with the evalmap of the agent passed in
+                    //which will get what the value is with the segment evalmap + this agents evalmap
+                    let newpathvalue = curpathvalue + cursegment.getvalue( &evalmap );
+                    
+                    //ONLY RUN THIS IF THIS NEW PATH VALUE IS NOT ABOVE THE HIGHEST GOAL NODE VALUE
+                    {
+                        
+                        if (newpathvalue < minimummotivatingvalue){
+                            
+                            goalnodesreached.insert(newpathvalue, othernodeid);
+                        }
+                        
+                        tovisit.insert( newpathvalue, othernodeid );
+                    }
+                    
+                    //if this current node is a goal node, add it to the set of goal nodes reached + the value
+                    //that the goal node was reached at, so when theres no more nodes to visit anymore, we can
+                    //return the highest value path to which goalnode
+                    //(each goalnode can only be reached one highest-value way)
+                    //(this is about which goalnode is the highest value - the pathvalue required to reach it)
+                    
+                    
+                }
+                
+                
+            }
+            
+            break;
+            
+            
+            
+            
+            
+            
+        }
+        
+        
+        
+        
+        
+        
+        
+        toreturn
+        
+    }
+    */
+    
+    /*
+    fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
+        
+        
+        //get the current node
+        
+        //get the segments connected to this node
+        
+        //set the path segments for those nodes it goes to
+        
+        //and the node that 
+        
+        
+        //every node at any point can only have one lowest value path to it
+        
+        //or do i want multiple routes to the same point to exist similarily, that would be better but slower
+        
+        
+        
+        
+        //the list of paths
+        let mut listofpaths: ListOfPaths = ListOfPaths:new();
+        
+        
+        
+        loop{
+            
+            //get the current lowest cost path
+            let (curpathvalue , curpathid) = listofpaths.getlowestvalidpath();
+            
+            //get the nodeid that the current path ends on
+            let curnodeid = pathtonode.get(&curpathid).unwrap();
+            //get the node that the current path ends on
+            let curnode = self.nodemap.get(&curnodeid).unwrap();
+            //get all the segments that are connected to this node
+            let connectedsegmentids = curnode.get_segment_ids();
+            
+            //for all the segments connected to this node
+            for cursegmentid in connectedsegmentids{
+                
+                let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
+                
+                let nextnodeid = cursegment.getothernode(curnodeid);
+                
+                let oldpathvalue = curpathvalue;
+                
+                //get the value of the new path
+                let newpathvalue = oldpathvalue + cursegment.getvalue(&evalmap);
+                
+                
+                
+                //add this path
+                listofpaths.addpath(newpathvalue, curpathid, nextnodeid);
+                
+                
+                
+            }
+            
+            break;
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        Vec::new()
+        
+        
+    }
+    */
+    
+    //get the id of every path that was taken to get to this path (not including itself)
+    fn getsetofpathstaken(startpathid: &u32, pathtooriginator: &HashMap<u32, u32>) -> HashSet<u32>{
+        
+        let mut returnset = HashSet::new();
+        
+        let mut currentpathid = startpathid;
+        
+        //follow back until it gets to a pathvalue that does not exist, that means that pathvalue doesnt have an originator
+        
+        loop{
+            
+            
+            
+            if let Some(pathbeforeid) = pathtooriginator.get(currentpathid){
+                
+                currentpathid = pathbeforeid;
+                
+                returnset.insert(*currentpathid);
+                
+            }
+            else{
+                
+                break;
+            }
+            
+            
+        }
+        
+        
+        
+        returnset
+        
+    }
     
 }
 
+
+
+struct ListOfPaths{
+    
+    currentpathid: u32,
+    
+    //for each node, the list of pathids that end on this node
+    nodetopath: HashMap< u32, HashSet<u32> >,
+    //for each path id, map the path id to the node that this path ends on
+    pathtonode: HashMap< u32 , u32 >,
+    
+    //for every path with a sucessor, the list of sucessors
+    pathtopaths: HashMap< u32, HashSet<u32> >,
+    
+    //a map from each path, to the path it grew out of
+    pathtooriginator: HashMap< u32, u32>, 
+    
+    //cost to get to this path, path id
+    listofpathcosts: HeapWithValue,
+    
+    
+}
+
+impl ListOfPaths{
+    //IMPORTANT INVARIANT
+    /*
+    AT ANY TIME, THERE CAN ONLY BE ONE CHAIN OF PATHS THAT ARE ON A NODE
+    A NODE MAY ONLY HAVE ONE PATH THAT ENDS ON IT
+    OR MULTIPLE PATHS THAT END ON IT, ONLY WHEN THOSE PATHS ARE A PART OF THE SAME CHAIN
+    (THERE CAN ONLY BE ONE PATH ENDING ON A NODE, WHO DOES NOT HAVE PROGENITORS THAT END ON THE SAME NODE)
+    */
+    fn new() -> ListOfPaths{
+        
+        ListOfPaths{
+            currentpathid:0,
+            nodetopath: HashMap::new(),
+            pathtonode: HashMap::new(),
+            pathtooriginator: HashMap::new(),
+            listofpathcosts: HeapWithValue::new(),
+            pathtopaths: HashMap::new()
+        }
+        
+    }
+    
+    fn getlowestvalidpath(&mut self) -> (f32, u32){
+        
+        self.listofpathcosts.pop()
+        
+        //A PATH CAN ONLY BE "GOTTEN" ONCE
+        //SO ONCE A PATH IS GIVEN WITH THIS FUNCTION, SET THAT THIS PATH CANT BE RETURNED BY THSI FUNCTION AGAIN
+        //THIS RULE IS ALWAYS TRUE
+        //YOU MAY RETURN MULTIPLE PATHS THAT END ON THE SAME NODE, BUT NEVER THE SAME PATH TWICE
+        
+    }
+    
+    
+    //check if the X path preceeds or IS the Y path
+    fn doesXproceedY(&self, xpathid: &u32, ypathid: &u32 ) -> bool{
+        
+        
+        if (xpathid == ypathid){
+            return(true)
+        }
+        
+        else{
+            
+            //get the path preceeding the ypath if it exists
+            //or return FALSE if the y path has nothing proceeding it
+            
+            if let Some( newypathid ) = self.pathtooriginator.get(ypathid){
+                
+                return( self.doesXproceedY(xpathid, newypathid )  )
+                
+            }
+            else
+            {
+                return(false)
+            }
+            
+        }        
+        
+    }
+    
+    
+    //for a new path to be added
+    //with its pathvalue, its progenitor path, and the node its ending on
+    //this is the ONLY means and function to add a path to the list of paths
+    fn addpath(&mut self, pathvalue:f32, previouspathid: u32, nodeid: u32){
+        
+        //if this is the lowest cost node on this point
+        //and if the only nodes on this point are predecessors of this path
+        //then this path can be made
+        let mut canbemade = false;
+        
+        //get all of the paths that end on this node
+        let pathsonsamenodeoption = self.nodetopath.get(&nodeid);
+        
+        //get if this node can be made
+        if let Some(pathsonsamenode)  = pathsonsamenodeoption{
+            
+            let lowestpathcostatnode = 10000000000.0;
+            
+            //first get the path cost of the LOWEST cost path on this node
+            for pathidendingonsamenode in self.nodetopath.get(&nodeid){
+                //lowestpathcostatnode = pathidendingonsamenode.getitspathcost();   
+            }
+            //if this path is a lower cost than any other path ending on the node it ends on
+            if ( pathvalue < lowestpathcostatnode ){
+                canbemade = true;
+            }
+        }
+        //if it hasnt been created yet
+        else{
+            //then there are no nodes for this 
+            
+            canbemade = true;
+            
+        }
+        
+        
+        //if this path can be made
+        if (canbemade){
+            
+            
+            let pathidendingonsamenodeset = self.nodetopath.get(&nodeid).unwrap().clone();
+
+
+            //if there are paths ending on this node
+            //if any of these paths are NOT a part of this nodes predecessors, remove them before creating creating this new path
+            
+            
+            //for each of the paths that end on this node
+            for pathidendingonsamenode in pathidendingonsamenodeset{
+                
+                if (self.doesXproceedY( &pathidendingonsamenode, &previouspathid)){
+                    
+                    //if this node is a predecessor to or the previous path
+                    //do nothing, you dont need to, and shouldnt remove this path before creating its successors
+                    
+                }
+                else{
+                    //if this node is NOT a predecessor to this new path
+                    //REMOVE this node
+                    self.removepathandsuccessors(&pathidendingonsamenode);
+                    
+                }
+            }
+            
+            
+            
+            //now create this path, and add it to all the lists
+            
+        }
+        
+        
+        //if there are no other paths that lead to this node, just create the node
+        
+        //else
+        {
+            //check if this path is a lower cost than ALL other paths leadings to this node
+            //if this path costs more than ANY paths ending on this node, it means that its taken
+            //a path to reach this node that is less efficient than what we already have, so it shouldnt be added
+            
+            //if the path cost is lower than ALL paths that end on this node then
+            
+            
+            //now the invariant says, SO PANIC IF THIS ISNT TRUE
+            //that there will only be ONE other path that ends on this node, which this path
+            //ISNT a progenator of
+            
+            //so remove that path, and all its sucessors
+            //self.removepathandsuccessors(pathtoremove);
+        }
+        
+    }
+    
+    
+    
+    //remove a path and all the paths that come out of it
+    //(do this when the path to this node is being replaced with a path that is better)
+    fn removepathandsuccessors(&mut self, pathid: &u32 ){
+        
+        //for all of the paths stemming from this path
+        let pathsstemmingoption = self.pathtopaths.get(pathid).clone();
+        
+        
+        //if there are paths that stem from this one:
+        if let Some(pathsstemming) = pathsstemmingoption.clone(){
+            
+            for pathstemmingid in pathsstemming.clone(){
+                
+                self.removepathandsuccessors(&pathstemmingid);
+            }
+            
+        }
+        
+        //remove this path
+        
+        self.pathtopaths.remove(pathid);
+        
+        let nodeid = self.pathtonode.remove(pathid).unwrap();
+        
+        self.nodetopath.get_mut(&nodeid).unwrap().remove(pathid);
+        
+        self.pathtooriginator.remove(pathid);
+        
+    }
+    
+    
+    
+    //FUNCTIONS
+    //get the path with the lowest pathvalue fo far
+    //get the other paths that end on this node
+    //remove this path and all the paths that spawn from this path
+    
+    
+    //get the lowest cost path
+    //create paths for all its paths
+    
+    //when creating a path
+    //check if the node its being created to is a higher cost than it
+    //if this path has a lower cost than that path, and that path isnt a progenitor of that path, remove that path and all it spawns
+    
+}
 
 
 //this is a heap that has associated with it
 struct HeapWithValue{
     
     //the list of the values and the nodes
-    
     mainlist: BTreeMap< NotNan<f32> , HashSet<u32> >,
     
     
@@ -1327,7 +1664,7 @@ impl HeapWithValue{
         let ( key, _ ) = self.mainlist.last_key_value().unwrap();
         let key = key.clone();
         let nodeset = self.mainlist.get_mut(&key).unwrap();
-
+        
         let pathvalue = key.into_inner();
         
         
@@ -1349,18 +1686,19 @@ impl HeapWithValue{
             if (nodeset.len() == 0){
                 self.mainlist.remove(&key);
             }
-
+            
             //return the pathvalue and the id of the node
             (pathvalue, returnnodeid)
-        
+            
         }
         else{
-
+            
             panic!("the return node id didnt exist in thsi set of nodes");
         }
         
         
     }
+    
     
     //add in the nodeid with its associated pathvalue
     fn insert( &mut self, pathvalue: f32 , nodeid: u32 ){
@@ -1371,7 +1709,6 @@ impl HeapWithValue{
         if (! self.mainlist.contains_key(&key)){
             
             self.mainlist.insert(key, HashSet::new());
-            
         }
         
         
@@ -1389,47 +1726,47 @@ impl HeapWithValue{
 //TEST THIS
 //given two evalmaps, add the second one to the first one
 fn addevalmaps(evalmap1: &mut HashMap<u32, f32>, evalmap2: &HashMap<u32, f32>) {
-
+    
     //for each of the values in evalmap2
     for (id2, value2) in evalmap2.iter(){
-
+        
         //if the evalmap1 has this curid value
         if let Some(value1) = evalmap1.get_mut(id2){
-
+            
             //add this value to it
             *value1 += value2;
-
+            
         }
         else{
-
+            
             //otherwise create it with the evalmap1 value and put it in
             evalmap1.insert(*id2, *value2);
         }
-
-
+        
+        
     }
-
-
+    
+    
 }
 
 
 //given two evalmaps, get the total evalulation as a number
 fn getevaluation(evalmap1: &HashMap< u32, f32> , evalmap2: &HashMap< u32, f32> ) -> f32{
-
+    
     let mut totalvalue: f32 = 0.0;
-
+    
     //for every id and value in evalmap1
     for (id1, value1) in evalmap1.iter(){
-
+        
         //if evalmap2 also has this value
         if let Some(value2) = evalmap2.get(id1){
-
+            
             totalvalue += value1 * value2;
-
+            
         }
-
+        
     }
-
+    
     totalvalue
 }
 
