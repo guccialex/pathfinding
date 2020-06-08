@@ -51,6 +51,9 @@ use std::cmp::Ordering::Equal;
 use std::collections::BTreeSet;
 
 
+use ncollide2d::bounding_volume::bounding_volume::HasBoundingVolume;
+
+
 fn main() {
     println!("Hello, world!");
     
@@ -64,25 +67,53 @@ fn main() {
     
     let points = [
     Point2::new(-3.0, -2.0),
-    Point2::new(-3.0, 525.0),
-    Point2::new(525.0, 525.0),
-    Point2::new(525.0, -2.0),
+    Point2::new(-3.0, 1225.0),
+    Point2::new(1225.0, 1225.0),
+    Point2::new(1225.0, -2.0),
     ];
     
     let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
     let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);//std::f32::consts::FRAC_PI_2);
     
     let mut pathmap = HashMap::new();
-    
+    pathmap.insert(1, 5.0);
     let mut entermap = HashMap::new();
-    
     let mut exitmap = HashMap::new();
     
     
-    let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap, entermap, exitmap);
+    let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
     
     
     
+    
+    let points = [
+    Point2::new(200.0, 200.0),
+    Point2::new(203.0, 925.0),
+    Point2::new(925.0, 925.0),
+    Point2::new(925.0, 202.0),
+    ];
+    
+    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+    let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);//std::f32::consts::FRAC_PI_2);
+    
+    let mut pathmap = HashMap::new();
+    pathmap.insert(1, 500.0);
+    //let mut entermap = HashMap::new();
+    //let mut exitmap = HashMap::new();
+    
+    
+    //let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
+    
+    
+    
+    
+    
+    
+    let mut evalmap = HashMap::new();
+    evalmap.insert(1, 1.0);
+    
+    
+    mypathfinding.getpath(10, evalmap);
     
     mypathfinding.drawstate();
     
@@ -257,40 +288,11 @@ pub struct PathfindingShape{
     exitmap: HashMap<u32, f32>,
     
     
-    //each agent has a value for each other agent
-    //the value to be at and the value to move through
+    //the map of nodes inside this shape, and to their corresponding outside node
+    insidetooutsidemap: HashMap<u32, u32>,
     
-    //some objects you kinda dont need to move through
-    //its not really about moving through them, its just about being at them
-    
-    //like lava and fire and ice and hard to move through mud and shit
-    //are hard to move through and mean a more signficant disadvantage to move through
-    //signficant amounts of them rather than insignificant amounts of them
-    //but some objects you kinda only care about interacting with
-    
-    
-    //what about a cost to move through, a cost to enter, and a cost to exit for all objects
-    //would i still NEED a "goal" value
-    
-    
-    //not really
-    //instead of a "goal" value for the chest, the chest would have a high "enter" value
-    //so you want to enter it, and it would have a high "exit" value until the chest was opened
-    
-    //and then when it was opened, the 
-    
-    //i can replace everything with a high "goal" instead with having a low, negative "enter" value
-    //and then a low "exit" value
-    //and then when the thing about the shape makes it valueless again, it loses that high value to enter
-    //and high value to leave
-    
-    
-    //the cost to walk somewhere increases as the intensity of the situation increases, and teh amount of shit to do increases
-    
-    
-    
-    
-    
+    //the map of nodes outside this shape, and to their corresponding inside node
+    outsidetoinsidemap: HashMap<u32, u32>,
     
 }
 
@@ -298,7 +300,42 @@ impl PathfindingShape{
     
     fn new(thepos: Isometry2<f32>, theshape: ConvexPolygon<f32>, pathmap: HashMap<u32, f32>, entermap: HashMap<u32, f32>, exitmap: HashMap<u32, f32> ) -> PathfindingShape{
         
-        PathfindingShape{pos: thepos, shape: theshape, pathmap: pathmap, entermap: entermap, exitmap: exitmap}
+        PathfindingShape{
+            pos: thepos,
+            shape: theshape,
+            pathmap: pathmap,
+            entermap: entermap,
+            exitmap: exitmap,
+            insidetooutsidemap: HashMap::new(),
+            outsidetoinsidemap: HashMap::new()
+        }
+    }
+    
+    fn addinsideoutsidenodes(&mut self, insidenode: &u32, outsidenode: &u32){
+        
+        self.insidetooutsidemap.insert( *insidenode, *outsidenode);
+        
+        self.outsidetoinsidemap.insert( *outsidenode, *insidenode);
+        
+    }
+    
+    //return the node , as well as the costmap to go from this node to that node, and that node to this node
+    fn getnodeandcostmap(&self, node1: &u32) -> (u32, HashMap<u32, f32>, HashMap<u32, f32> ){
+        
+        //if its in the insidetooutsidemap
+        if let Some(node2) = self.insidetooutsidemap.get(&node1){
+            
+            return( (*node2, self.exitmap.clone(), self.entermap.clone() ) );
+        }
+        
+        if let Some(node2) = self.outsidetoinsidemap.get(&node1){
+            
+            return( (*node2, self.entermap.clone(), self.exitmap.clone() ) );
+        }
+        
+        panic!("this node isnt on this shape");
+        
+        
     }
     
 }
@@ -306,7 +343,6 @@ impl PathfindingShape{
 
 #[derive(Debug)]
 pub struct PathfindingSegment{
-    
     
     //the id of the two nodes this segment is between
     node1id: u32,
@@ -316,7 +352,9 @@ pub struct PathfindingSegment{
     
     leafid: DBVTLeafId,
     
-    evalmap: HashMap<u32, f32>,
+    evalmap1to2: HashMap<u32, f32>,
+    
+    evalmap2to1: HashMap<u32, f32>,
     
 }
 
@@ -324,15 +362,42 @@ impl PathfindingSegment{
     
     fn new(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, evalmap: HashMap<u32, f32>) -> PathfindingSegment{
         
-        PathfindingSegment{segment: thesegment, leafid: dbvtleafid, node1id: node1id, node2id: node2id, evalmap: evalmap}
+        PathfindingSegment{
+            segment: thesegment,
+            leafid: dbvtleafid,
+            node1id: node1id,
+            node2id: node2id,
+            evalmap1to2: evalmap.clone(),
+            evalmap2to1: evalmap
+        }
     }
     
-    
-    //given an evaluation map of an agent, return the cost that following this segment will cost
-    // (or gain, it can be a positive value when its a goal node)
-    fn getvalue(&self, agentevalmap: &HashMap<u32, f32> ) -> f32{
+    //create a new pathfinding segment where the direction of the path matters
+    fn newdirectional(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, evalmap1to2: HashMap<u32, f32>, evalmap2to1: HashMap<u32, f32>) -> PathfindingSegment{
         
-        getevaluation(&self.evalmap, agentevalmap )
+        PathfindingSegment{
+            segment: thesegment,
+            leafid: dbvtleafid,
+            node1id: node1id,
+            node2id: node2id,
+            evalmap1to2: evalmap1to2,
+            evalmap2to1: evalmap2to1
+        }
+    }
+    
+    //given a node to start at, get the cost to get to the other end, and the node it ends at
+    fn getothernodeandvalue(&self, thisnodeid: &u32, agentevalmap: &HashMap<u32, f32>) -> (u32, f32){
+        
+        if (*thisnodeid == self.node1id){
+            (self.node2id, getevaluation(&self.evalmap1to2, agentevalmap ) )
+            
+        }
+        else if ( *thisnodeid == self.node2id ) {
+            (self.node1id, getevaluation(&self.evalmap2to1, agentevalmap ) )
+        }
+        else{
+            panic!("this segment doesnt have this nodeid at all")
+        }
         
     }
     
@@ -381,6 +446,8 @@ pub struct PathfindingNode{
     attachedsegmentids: HashSet<u32>,
     
     
+    //the shape it might be on
+    optionshapeon: Option<u32>,
     
     
 }
@@ -399,10 +466,34 @@ impl PathfindingNode{
             
             attachedsegmentids: HashSet::new(),
             
+            optionshapeon: None,
             
         }
         
     }
+
+    fn removeattachedsegment(&mut self, attachedsegmentid: &u32){
+        self.attachedsegmentids.remove(attachedsegmentid);
+    }
+    
+    fn newonshape( basepoint: Point2<f32>, linenormal: Vector2<f32>, shapetobeon: u32 ) -> PathfindingNode{
+        
+        PathfindingNode{
+            
+            realpoint: basepoint,
+            
+            basepoint: basepoint,
+            
+            linenormal: linenormal,
+            
+            attachedsegmentids: HashSet::new(),
+            
+            optionshapeon: Some(shapetobeon),
+            
+        }
+        
+    }
+    
     
     //given a distance from the base, create a real node at that distance
     //and pass its position back
@@ -441,12 +532,27 @@ struct Pathfinding{
     totalnodes: u32,
     
     
-    //a hashmap of pathfinding shapes
     shapemap: HashMap<u32, PathfindingShape>,
+    //other data associated with shapes:
+    //the segments have a reference to the id of the nodes they're on
+    //the shape in the dbvt
+    //the shapeset manager has a reference to its ID
+
+    
     segmentmap: HashMap<u32, PathfindingSegment>,
+    //other data associated with segments:
+    //both nodes have the reference to the segment that is between them
+    //the shape in the dbvt
+
+
     nodemap: HashMap<u32, PathfindingNode>,
-    
-    
+    //other data associated with nodes:
+    //segments have a reference to teh nodes theyre on
+    //shapes have reference to the id of the nodes on the
+    //the shape in the dbvt
+    //the shapeset manager has a reference for this ndoe
+
+
     shapedbvt: DBVT<f32, u32, AABB<f32>>,
     connectiondbvt: DBVT<f32, u32, AABB<f32>>,
     realnodedbvt: DBVT<f32, u32, AABB<f32>>,
@@ -478,8 +584,6 @@ impl Pathfinding{
             nodemap: HashMap::new(),
             
             
-            //a map between a node and all of the segments attached to it
-            
             
             shapedbvt: DBVT::new(),
             
@@ -488,7 +592,7 @@ impl Pathfinding{
             realnodedbvt: DBVT::new(),
             
             
-            linelengthpernode: 70.0,
+            linelengthpernode: 1200.0,
             
             
             agentwidth: 55.0,
@@ -500,18 +604,95 @@ impl Pathfinding{
     }
     
     
-    fn createnode(&mut self, nodebase: Point2<f32>, nodenormal: Vector2<f32>, shapestobein: Vec<u32>,shapestobeout: Vec<u32> ) {
+    
+    
+    //create two nodes on the edge of a shape, one outside, one inside
+    fn createbordernodes(&mut self, nodebase: Point2<f32>, nodenormal: Vector2<f32>, shapeid: u32){        
         
+        let insidenodeid = self.totalnodes;        
+        self.totalnodes += 1;
+        
+        let outsidenodeid = self.totalnodes;        
+        self.totalnodes += 1;
+        
+        
+        let mut thepathfindinginsidenode = PathfindingNode::newonshape(nodebase, nodenormal, shapeid);
+        let mut thepathfindingoutsidenode = PathfindingNode::newonshape(nodebase, nodenormal, shapeid);
+        
+        
+        //make a real node for the two nodes at the agentwidth distance
+        let realpoint = thepathfindinginsidenode.createreal(self.agentwidth / 1.9 );
+        let realpoint = thepathfindingoutsidenode.createreal(self.agentwidth / 1.9 );
+        
+        //add it to this objects map of the nodes
+        self.nodemap.insert( insidenodeid, thepathfindinginsidenode );
+        self.nodemap.insert( outsidenodeid, thepathfindingoutsidenode );
+        
+        
+        
+        //get the shape its on
+        let mut shapenodesareon = self.shapemap.get_mut(&shapeid).unwrap();
+        
+        //put the inside and outside node for the shape
+        shapenodesareon.addinsideoutsidenodes(&insidenodeid, &outsidenodeid);
+        
+        
+        
+        
+        
+        let ballradius = self.agentwidth / 2.0;
+        
+        //ball shape for the point
+        let nodeshape = Ball::new(ballradius);
+        
+        //create an iso at the point this node is
+        let nodeiso = Isometry2::translation(realpoint.x, realpoint.y);
+        
+        //create a bounding volume for it
+        let thebounding = bounding_volume::aabb(&nodeshape, &nodeiso);
+        
+        
+        //create a dbvt leaf for node 1 at this point
+        let theleaf = DBVTLeaf::new( thebounding.clone() , insidenodeid);
+        //add this node to the node dbvt
+        self.realnodedbvt.insert(theleaf);
+        
+        //create a dbvt leaf for node 2 at this point
+        let theleaf = DBVTLeaf::new( thebounding, outsidenodeid);
+        //add this node to the node dbvt
+        self.realnodedbvt.insert(theleaf);
+        
+        
+        //get the shapes that both of these nodes intersects with 
+        let mut nodeshapeset = self.getshapeintersection(&nodeiso, &nodeshape);
+        
+        nodeshapeset.insert(shapeid);
+        self.shapesetmanager.addnode(insidenodeid, nodeshapeset.clone());
+        
+        nodeshapeset.remove(&shapeid);
+        self.shapesetmanager.addnode(outsidenodeid, nodeshapeset);
+        
+        
+        
+        self.setconnections(insidenodeid);
+        self.setconnections(outsidenodeid);
+        
+        
+    }
+    
+    
+    /*
+    //create a node which isnt on the border of a shape, figure out what shape its on, and create it for there
+    fn createnode(&mut self, nodebase: Point2<f32>, nodenormal: Vector2<f32> ) {
         
         let nodeid = self.totalnodes;
-        
         self.totalnodes += 1;
+        
         
         let mut thepathfindingnode = PathfindingNode::new(nodebase, nodenormal);
         
         //make a real node for this node at the agentwidth distance
         let realpoint = thepathfindingnode.createreal(self.agentwidth / 1.9 );
-        
         
         self.nodemap.insert( nodeid, thepathfindingnode );
         
@@ -538,41 +719,20 @@ impl Pathfinding{
         //get the shapes that this node intersects with 
         let mut nodeshapeset = self.getshapeintersection(&nodeiso, &nodeshape);
         
-        for curshape in shapestobein{    
-            
-            nodeshapeset.insert(curshape);
-        }
-        
-        for curshape in shapestobeout{
-            
-            nodeshapeset.remove(&curshape);
-        }
-        
         
         self.shapesetmanager.addnode(nodeid, nodeshapeset);
         
         
-        //println!("{:?}", self.shapesetmanager);
         
         self.setconnections(nodeid);
-    }
-    
-    
-    
-    
-    //TODO
-    //THIS FUNCTION
-    fn moveshape(&mut self, shapeid: u32){
         
         
     }
+    */
     
     
-    //TODO
     
-    //BE ABLE TO MOVE A SHAPE AND KEEP THE NODES ATTACHED IF VALID AND DISATTACHED IF NOT
     
-    //IMPLEMENT THE NODEBOUNDINGS
     fn addshape(&mut self, shape: ConvexPolygon<f32>, pos: Isometry2<f32>, pathmap: HashMap<u32, f32>, entermap: HashMap<u32, f32> , exitmap: HashMap<u32, f32>) -> u32{
         
         //the id of this shape
@@ -611,9 +771,7 @@ impl Pathfinding{
             
             let mut thevisitor = BoundingVolumeInterferencesCollector::new( &thebounding, &mut collectedall );
             
-            
             self.connectiondbvt.visit( &mut thevisitor );
-            
             
             
             //check if it actually intersects
@@ -639,13 +797,7 @@ impl Pathfinding{
                 //if it is intersecting
                 if (theproximity == Proximity::Intersecting ){
                     
-                    
-                    self.connectiondbvt.remove(pathsegment.leafid);
-                    
-                    self.segmentmap.remove(&possibleintersectid);
-                    
-                    
-                    
+                    self.destroysegment( &possibleintersectid );
                     
                 }
                 
@@ -782,7 +934,7 @@ impl Pathfinding{
                     
                     //the number of connecting nodes that will be made to connect this segment and the next one
                     //at point2 , between point 1 and 3
-                    let connectingslerps = 0;
+                    let connectingslerps = 1;
                     
                     for curstep in 0..connectingslerps{
                         
@@ -803,23 +955,9 @@ impl Pathfinding{
             //now create all of the nodes at those positions and add them to the collision world
             for (nodepos, nodenormal) in nodepostocreate{
                 
-                //create one node inside the shape and one node outside the shape for each node along the shape
                 
-                let mut shapestobein: Vec<u32> = Vec::new(); 
-                let mut shapestobeout: Vec<u32> = Vec::new();
-                shapestobein.push(shapeid);
+                self.createbordernodes( nodepos , nodenormal , shapeid);
                 
-                self.createnode( nodepos, nodenormal, shapestobein, shapestobeout);
-                
-                //nodescreated.push( ( self.createnode( &curnodepos), shapestobein, shapestobeout ) );
-                
-                let mut shapestobein: Vec<u32> = Vec::new(); 
-                let mut shapestobeout: Vec<u32> = Vec::new();
-                shapestobeout.push(shapeid);
-                
-                self.createnode( nodepos, nodenormal, shapestobein, shapestobeout);
-                
-                //nodescreated.push( ( self.createnode( &curnodepos), shapestobein, shapestobeout ) );
                 
             }
             
@@ -877,53 +1015,97 @@ impl Pathfinding{
     }
     
     
-    //set the connections for a given node
+
+
+
+
+    
+    //destroy every connection thats attached to this node
+    fn destroynodeconnections(&mut self, nodeid: &u32){
+        
+        let mut thenode = self.nodemap.get_mut(nodeid).unwrap();
+
+        //get every segment attached to it and destroy it
+        let mut attachedsegments = thenode.get_segment_ids();
+
+        for cursegmentid in attachedsegments{
+            self.destroysegment( &cursegmentid );
+
+        }
+
+        
+    }
+
+    //destroy a single segment
+    fn destroysegment(&mut self, segmentid: &u32){
+
+        let mut thesegment = self.segmentmap.get_mut(segmentid).unwrap();
+
+        let dbvtleafid = thesegment.leafid;
+
+        //get the nodes on this segment, remove this segment from their connected segments
+        let node1id = thesegment.node1id;
+        let node2id = thesegment.node2id;
+
+        let mut node1 = self.nodemap.get_mut(&node1id).unwrap();
+        node1.removeattachedsegment(segmentid);
+        
+        let mut node2 = self.nodemap.get_mut(&node2id).unwrap();
+        node2.removeattachedsegment(segmentid);
+
+
+
+        //remove the reference to this segment from the dbvt list
+        self.connectiondbvt.remove(dbvtleafid);
+
+        
+        self.segmentmap.remove(segmentid);
+
+    }
+    
+    
+    
+    
+    //destroy every segment connected to this node
+    //then recreate every segment for this node
     fn setconnections(&mut self, nodeid: u32){
         
-        //get this node
-        //actually, i have to get it later cuz i need it as mutable
-        //let thisnode = self.nodemap.get(&nodeid).unwrap();
+        
+        self.destroynodeconnections(&nodeid);
+        
         
         //get all other nodes in the same shape set as this node
         let thenodes = self.shapesetmanager.getnodesinsameshapeset(&nodeid);
         
-        //println!("the nodes in teh same set{:?}", self.shapesetmanager.getnodesinsameshapeset(&nodeid) );
-        
-        let thisnodepos = self.nodemap.get(&nodeid).unwrap().realpoint;
-        
-        use ncollide2d::bounding_volume::bounding_volume::HasBoundingVolume;
+        let thisnode = self.nodemap.get(&nodeid).unwrap();
+        let thisnodepos = thisnode.realpoint;
         
         //create a segment between every node in the same shape set
         for othernodeid in thenodes{
             
             //get the other node
-            let othernode = self.nodemap.get_mut(&othernodeid).unwrap();
-            
-            
+            let othernode = self.nodemap.get(&othernodeid).unwrap();
             let othernodepos = othernode.realpoint;
             
             
-            let newsegment = Segment::new(thisnodepos, othernodepos);
-            
-            
+            let shapesegment = Segment::new(thisnodepos, othernodepos);
             
             let mut collectedall: Vec<(u32)> = Vec::new();
             
             //create a bounding and grow it by agentwidth / 2
-            let mut thebounding : AABB<f32> = newsegment.local_bounding_volume();
+            let mut thebounding : AABB<f32> = shapesegment.local_bounding_volume();
             thebounding.loosen(self.agentwidth / 2.0 );
             
             let mut thevisitor = BoundingVolumeInterferencesCollector::new( &thebounding, &mut collectedall);
             
-            
             self.shapedbvt.visit( &mut thevisitor);
             
             
-            
+            //if this segment intersects with any shapes, dont create it
             let mut validconnection = true;
-            
-            
             for shapeid in collectedall{
+                
+                
                 use ncollide2d::query::Proximity;
                 
                 //see if the shape and the segment are actually within proximity
@@ -931,7 +1113,7 @@ impl Pathfinding{
                 
                 let theproximity = proximity(
                     &Isometry2::identity(),
-                    &newsegment, 
+                    &shapesegment, 
                     &thepathshape.pos, 
                     &thepathshape.shape, 
                     self.agentwidth / 2.0
@@ -952,31 +1134,16 @@ impl Pathfinding{
                 }
                 
                 
+                
             }
-            
             
             if (validconnection){
                 
-                //I SHOULDNT CREATE A SEGMENT FOR THIS NODE THAT ALREADY EXISTS
                 
                 let segmentid = self.totallines;
                 self.totallines += 1;
                 
                 
-                
-                //create a bounding volume for the segment
-                let mut thebounding: AABB<f32> = newsegment.local_bounding_volume();
-                thebounding.loosen(self.agentwidth / 2.0 );
-                
-                //create a dbvt leaf for this node at this point
-                let theleaf = DBVTLeaf::new( thebounding, segmentid);
-                
-                //add this node to the node dbvt
-                let connectionleafid = self.connectiondbvt.insert(theleaf);
-                
-                
-                
-                //the total shapeset of all the shape shapesets combined
                 let mut connectionevalmap: HashMap<u32, f32> = HashMap::new();
                 
                 //get the shapeset that both of the nodes are in (because theyre in the same shapeset)
@@ -986,37 +1153,118 @@ impl Pathfinding{
                     let curshape = self.shapemap.get(&curshapeid).unwrap();
                     
                     //add the shapesevalmap to the evalmap for this connection
-                    
                     addevalmaps(&mut connectionevalmap, &curshape.pathmap);
-                    
                     
                 }
                 
                 
-                let pathsegment = PathfindingSegment::new(newsegment, connectionleafid, nodeid, othernodeid, connectionevalmap);
+                //create a bounding volume for the segment
+                let mut thebounding: AABB<f32> = shapesegment.local_bounding_volume();
+                thebounding.loosen(self.agentwidth / 2.0 );
+                
+                //create a dbvt leaf for this node at this point
+                let theleaf = DBVTLeaf::new( thebounding, segmentid);
+                let dbvtleafid = self.connectiondbvt.insert(theleaf);
+                
+                
+                //create a segment
+                let pathsegment = PathfindingSegment::new(
+                    shapesegment,
+                    dbvtleafid,
+                    nodeid,
+                    othernodeid,
+                    connectionevalmap
+                );
                 
                 self.segmentmap.insert(segmentid, pathsegment);
                 
                 
-                
-                othernode.addsegment(segmentid);
-                
-                let thisnode = self.nodemap.get_mut(&nodeid).unwrap();
-                
-                //for both the node and the other node, add this id to the list of segments its attached to
+                let mut thisnode = self.nodemap.get_mut(&nodeid).unwrap();
                 thisnode.addsegment(segmentid);
                 
-                
-                
+                let mut othernode = self.nodemap.get_mut(&othernodeid).unwrap();
+                othernode.addsegment(segmentid);
                 
             }
             
             
+        }
+        
+        
+        
+        
+        //set the connection for the outside to this inside node or inside to this outside node
+        //get if this shape is on a node and the shape id of the shape its on
+        if let Some(shapeid) = self.nodemap.get(&nodeid).unwrap().optionshapeon{
             
+            let thisnode = self.nodemap.get(&nodeid).unwrap();
+            
+            let segmentid = self.totallines;
+            self.totallines += 1;
+            
+            
+            //get the shape
+            let theshape = self.shapemap.get(&shapeid).unwrap();
+            
+            
+            
+            //get the other node
+            //get the evalmap of going from node 1 to 2 and node 2 to 1
+            
+            let (othernodeid, nodetoothercostmap, othertonodecostmap) = theshape.getnodeandcostmap(&nodeid);
+            
+            //what data is assocaited with the creation of a segment?
+            
+            //self.segmentmap
+            //self.nodemap all the nodes have a reference to the segmentid between them and another node
+            //self.connectiondbvt for a shape for the segment
+            
+            
+            let thisnodepos = thisnode.realpoint;
+            
+            let othernode = self.nodemap.get(&othernodeid).unwrap();
+            let othernodepos = othernode.realpoint;
+            
+            
+            let shapesegment = Segment::new(thisnodepos, othernodepos);
+            
+            
+            //create a bounding volume for the segment
+            let mut thebounding: AABB<f32> = shapesegment.local_bounding_volume();
+            thebounding.loosen(self.agentwidth / 2.0 );
+            
+            //create a dbvt leaf for this node at this point
+            let theleaf = DBVTLeaf::new( thebounding, segmentid);
+            let dbvtleafid = self.connectiondbvt.insert(theleaf);
+            
+            
+            //create a segment
+            let pathsegment = PathfindingSegment::newdirectional(
+                shapesegment,
+                dbvtleafid,
+                nodeid,
+                othernodeid,
+                nodetoothercostmap,
+                othertonodecostmap
+            );
+            
+            self.segmentmap.insert(nodeid, pathsegment);
+            
+            
+            //RIGHT NOw the issue is that for some reason, segments are being attached to nodes which
+            //are not connected to them, find out why
+            //or are being given the wrong node ids for the nodes theyre attached to
+            
+            
+            
+            let mut thisnode = self.nodemap.get_mut(&nodeid).unwrap();
+            thisnode.addsegment(segmentid);
+            
+            let mut othernode = self.nodemap.get_mut(&othernodeid).unwrap();
+            othernode.addsegment(segmentid);
             
             
         }
-        
         
         
         
@@ -1025,6 +1273,13 @@ impl Pathfinding{
     
     
     
+    
+    
+    
+    
+
+
+
     //draws all of the shapes and all of the nodes and all of the connections
     //done
     fn drawstate(&self){
@@ -1033,8 +1288,8 @@ impl Pathfinding{
         
         let leftedge = -100;
         let topedge = -100;
-        let bottomedge = 1000;
-        let rightedge = 1000;
+        let bottomedge = 1500;
+        let rightedge = 1500;
         
         let xsize = rightedge - leftedge;
         let ysize = bottomedge - topedge;
@@ -1119,212 +1374,127 @@ impl Pathfinding{
         
     }
     
-    
-    
-    
-    
-    
-    //every time a shape moves, check all the nodes inside it, and see if they are still inside that same shape
-    //check what connection lines the shape now intersects with and destroy those
-    //and all the nodes that moved along with the shape, check if their connection lines are still valid
-    
-    
-    
-    
-    
-    
-    
-    //i dont actually care what set of shapes a shape is in, only what sets of shapes nodes are in
-    
-    
-    
-    
-    //get all the shapes the node is in
-    
-    
-    
-    
-    
-    //given a node
-    //get the highest value path for it as a list of points to visit
-    /*
+    //get the path
     fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
-        
-        //the list of nodes
-        //and their lowest pathvalue
-        
-        //being unititialized is teh same as being -infinity
-        
-        
-        //the set of nodes i have already visited, in order of path score
-        //along with the node id, and the list of nodes that have already been visited along this path
-        let mut visitednodes: TreeDataStruct = TreeDataStruct::new();
-        
-        
-        //a branching tree of the paths taken stemming from the starting node
-        //go to the lowest cost node
-        //branch off from that node, the nodes that are connected if they have a lower cost
-        
-        
-        /*
-        the list of nodes that ive visited, their corresponding score, and the nodes that the path to this node has come from
-        is in some data structure:
-        
-        where to get to one
-        
-        */
-        
-        /*
-        the list of nodes visited
-        
-        
-        
-        */
-        
-        /*
-        the data struct I need:
-        
-        Get the lowest pathvalue node
-        get the list of nodes that are passed to get to this node with this pathvalue
-        
-        add a node into a struct along with its pathvalue, and the node that this path comes from
-        (a perfect algorithm would keep both paths, a faster algorithm would replace with the lower cost then delete higher cost)
-        */
-        
-        /*
-        
-        when getting the list of nodes, you just follow backwards the path of nodes, to see what nodes are visited
-        (i need this anyways, when getting the list of nodes to follow when i have the eventual path)
-        
-        so the data struct is a HeapWithValue
-        
-        but i have a second list of the nodes currently in teh HeapWithValue to the node their path and value came from
-        
-        
-        */
-        
-        
-        
-        //the list of nodes associated with their pathvalue
-        let mut tovisit : HeapWithValue = HeapWithValue::new();
-        
-        
-        
-        //the list of points to visit
-        let mut toreturn = Vec::new();
-        
-        
-        
-        //start the loop with the node passed in
-        let curnodeid = nodeid;
-        
-        
-        loop{
-            
-            //get the highest value node from set of nodes to visit
-            let (curpathvalue, curnodeid) = tovisit.pop();
-            
-            //if this node has already been visited
-            if (visitednodes.contains(&curnodeid) ){
-                
-                //i shouldnt do anything with this node
-                //just go on to the next one
-                
-            }
-            else
-            {
-                
-                //add it to the list of nodes visited
-                visitednodes.insert(curnodeid);
-                
-                
-                //get this current node
-                let curnode = self.nodemap.get(&curnodeid).unwrap();
-                
-                //get all the segments that are associated with it
-                let associatedsegmentids: HashSet<u32> = curnode.get_segment_ids();
-                
-                //for each of the assocaited segments
-                for cursegmentid in associatedsegmentids{
-                    
-                    let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
-                    
-                    let othernodeid = cursegment.getothernode(curnodeid);
-                    
-                    
-                    //make the node value to reach the current node value plus the value that will be given when
-                    //calling the getvalue method on this segment with the evalmap of the agent passed in
-                    //which will get what the value is with the segment evalmap + this agents evalmap
-                    let newpathvalue = curpathvalue + cursegment.getvalue( &evalmap );
-                    
-                    //ONLY RUN THIS IF THIS NEW PATH VALUE IS NOT ABOVE THE HIGHEST GOAL NODE VALUE
-                    {
-                        
-                        if (newpathvalue < minimummotivatingvalue){
-                            
-                            goalnodesreached.insert(newpathvalue, othernodeid);
-                        }
-                        
-                        tovisit.insert( newpathvalue, othernodeid );
-                    }
-                    
-                    //if this current node is a goal node, add it to the set of goal nodes reached + the value
-                    //that the goal node was reached at, so when theres no more nodes to visit anymore, we can
-                    //return the highest value path to which goalnode
-                    //(each goalnode can only be reached one highest-value way)
-                    //(this is about which goalnode is the highest value - the pathvalue required to reach it)
-                    
-                    
-                }
-                
-                
-            }
-            
-            break;
-            
-            
-            
-            
-            
-            
-        }
-        
-        
-        
-        
-        
-        
-        
-        toreturn
-        
-    }
-    */
-    
-    /*
-    fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
-        
-        
-        //get the current node
-        
-        //get the segments connected to this node
-        
-        //set the path segments for those nodes it goes to
-        
-        //and the node that 
-        
-        
-        //every node at any point can only have one lowest value path to it
-        
-        //or do i want multiple routes to the same point to exist similarily, that would be better but slower
-        
         
         
         
         //the list of paths
-        let mut listofpaths: ListOfPaths = ListOfPaths:new();
+        let mut listofpaths: ListOfPaths = ListOfPaths::new();
+        
+        listofpaths.addfirstpath(nodeid);
+        
+        
+        //how do I know when im done?
+        //cuz this just runs on forever
+        
+        //gets the lowest value valid path
+        //
+        let mut thelowestpath = 0;
         
         
         
+        
+        for x in 0..100000{
+            
+            //store the cost of the last node, so i know at the end, what
+            //the minimum value path is
+            let lastcost = 0.0;
+            
+            
+            //println!("This is it{:?}", listofpaths.pathtonode);
+            
+            //println!("This is it originator{:?}", listofpaths.pathtooriginator);
+            
+            //println!("This is it to path{:?}", listofpaths.pathtopaths);
+            
+            if let Some( (pathcost, pathid) ) = listofpaths.getlowestvalidpath(){
+                
+                
+                //println!("cost, then id, {:?}, {:?}", pathcost, pathid);
+                
+                thelowestpath = pathid;
+                
+                
+                
+                
+                //get the node that this path ends on
+                
+                let currentnodeid = listofpaths.getnodeofpath( &pathid );
+                
+                //println!("This is the current node {:?}", currentnodeid);
+                
+                
+                
+                //get all the segments attached to the current node
+                
+                //get the list of segments leaving this node
+                let currentnode = self.nodemap.get(&currentnodeid).unwrap();
+                
+                //get the segmentids attached to this node
+                let setofsegmentsattached = currentnode.get_segment_ids();
+                
+                
+                for cursegmentid in setofsegmentsattached{
+                    
+                    //println!("the segment attached to this node{:?}", cursegmentid);
+                    
+                    //get the segment
+                    let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
+                    
+                    //println!("cursegmentid:{:?}", cursegmentid);
+                    //println!("curnodeid:{:?}", currentnodeid);
+                    //println!("cursegment:{:?}", cursegment);
+                    
+                    
+                    //for this segment, get the node on the other end, along with the value of it
+                    let (newnodeid, curpathvalue) = cursegment.getothernodeandvalue(&currentnodeid, &evalmap);
+                    
+                    //println!("the node the segment is attached to and value{:?}, + {:?}", curpathvalue, newnodeid);
+                    
+                    let newpathvalue = curpathvalue + pathcost;
+                    
+                    //add this to the list of paths
+                    println!("I got here, the main loop is breaking after 1 iteration, so what is the problem?");
+                    listofpaths.addpath(newpathvalue, pathid, newnodeid);
+                    
+                }
+                
+            }
+            else
+            {    
+                println!("no lowest cost paths left");
+                break;
+            }
+        }
+        
+        //print the list of paths taken from the origin node to get to this one
+        listofpaths.printfullpath(&thelowestpath);
+        
+        //listofpaths.removepathandsuccessors(&0);
+        
+        
+        println!("This is it to node{:?}", listofpaths.pathtonode);
+        
+        println!("");
+        println!("This is it originator{:?}", listofpaths.pathtooriginator);
+        println!("");
+        println!("This is it to path{:?}", listofpaths.pathtopaths);
+        println!("");
+        println!("This is the paths to its cost{:?}", listofpaths.pathtocost);
+        println!("");
+        
+        println!("");
+        println!("");
+        
+        
+        
+        listofpaths.printfullpath(&thelowestpath);
+        
+        self.drawfullpath(  &listofpaths, &thelowestpath );
+        
+        
+        /*
         loop{
             
             //get the current lowest cost path
@@ -1360,12 +1530,7 @@ impl Pathfinding{
             
             break;
         }
-        
-        
-        
-        
-        
-        
+        */
         
         
         
@@ -1374,7 +1539,155 @@ impl Pathfinding{
         
         
     }
-    */
+    
+    //draw the full path with the listofpaths, and the pathid
+    fn drawfullpath(&self, listofpaths: &ListOfPaths , pathid: &u32){
+        
+        
+        //get the set of connecions
+        let setofconnections = listofpaths.getsetofconnections(&pathid);
+        
+        println!("This is the set of connections: {:?}", setofconnections);
+        
+        
+        let mut imageoutput: Vec<(Vec<(u8,u8,u8)>)>  = Vec::new();
+        
+        let leftedge = -100;
+        let topedge = -100;
+        let bottomedge = 1500;
+        let rightedge = 1500;
+        
+        let xsize = rightedge - leftedge;
+        let ysize = bottomedge - topedge;
+        
+        
+        //fill the list and set the background colour
+        for y in 0..ysize{
+            
+            let mut thisrow: Vec<(u8,u8,u8)> = Vec::new();
+            for x in 0..xsize{
+                thisrow.push((70,10,10));
+            }
+            imageoutput.push(thisrow);
+            
+        }
+        
+        
+        
+        
+        //iterate through the connections
+        println!("this is the size is{:?}", self.segmentmap.len());
+        
+        for (_, cursegment) in self.segmentmap.iter(){
+            
+            let mut thecolour = (100,100,100);
+            
+            
+            let point1 = cursegment.segment.a();
+            
+            let point2 = cursegment.segment.b();
+            
+            let point1x = point1.x as i16;
+            let point1y = point1.y as i16;
+            
+            let point2x = point2.x as i16;
+            let point2y = point2.y as i16;
+            
+            drawline(&mut imageoutput, (point1x, point1y),   ( point2x, point2y )  , leftedge, topedge, thecolour );
+            
+            
+            
+        }
+        
+        
+        
+        
+        //iterate through the shapes
+        for (_, curpathshape) in self.shapemap.iter(){
+            
+            
+            let shapeshape = &curpathshape.shape;
+            let shapepos = &curpathshape.pos;
+            
+            
+            
+            drawconvex(&mut imageoutput, shapeshape, shapepos, leftedge, topedge, (200,200,200) );
+            
+        }
+        
+        
+        
+        
+        
+        //iterate through the connections again for the coloured ones
+        for (_, cursegment) in self.segmentmap.iter(){
+            
+            let mut thecolour = (200,200,100);
+            
+            if (setofconnections.contains( &(cursegment.node1id,cursegment.node2id) )){
+                
+                let point1 = cursegment.segment.a();
+                
+                let point2 = cursegment.segment.b();
+                
+                let point1x = point1.x as i16;
+                let point1y = point1.y as i16;
+                
+                let point2x = point2.x as i16;
+                let point2y = point2.y as i16;
+                
+                drawline(&mut imageoutput, (point1x, point1y),   ( point2x, point2y )  , leftedge, topedge, thecolour );
+                
+            }
+            
+            if (setofconnections.contains( &(cursegment.node2id,cursegment.node1id) )){
+                
+                
+                let point1 = cursegment.segment.a();
+                
+                let point2 = cursegment.segment.b();
+                
+                let point1x = point1.x as i16;
+                let point1y = point1.y as i16;
+                
+                let point2x = point2.x as i16;
+                let point2y = point2.y as i16;
+                
+                drawline(&mut imageoutput, (point1x, point1y),   ( point2x, point2y )  , leftedge, topedge, thecolour );
+                
+            }
+            
+            
+            
+        }
+        
+        
+        
+        
+        
+        //turn the image output into a flat u8 array
+        let mut buffer: Vec<u8> = Vec::new(); // Generate the image data
+        
+        for currow in imageoutput{
+            
+            for currgb in currow{
+                
+                buffer.push(currgb.0);
+                buffer.push(currgb.1);
+                buffer.push(currgb.2);
+                
+            }
+            
+        }
+        
+        
+        
+        // Save the buffer as "image.png"
+        image::save_buffer("statedrawnpath.png", &buffer, xsize as u32, ysize as u32, image::ColorType::Rgb8).unwrap();
+        
+        
+        
+    }
     
     //get the id of every path that was taken to get to this path (not including itself)
     fn getsetofpathstaken(startpathid: &u32, pathtooriginator: &HashMap<u32, u32>) -> HashSet<u32>{
@@ -1432,6 +1745,8 @@ struct ListOfPaths{
     //cost to get to this path, path id
     listofpathcosts: HeapWithValue,
     
+    //the map of the costs of each path
+    pathtocost: HashMap<u32, f32>,
     
 }
 
@@ -1451,12 +1766,81 @@ impl ListOfPaths{
             pathtonode: HashMap::new(),
             pathtooriginator: HashMap::new(),
             listofpathcosts: HeapWithValue::new(),
-            pathtopaths: HashMap::new()
+            pathtopaths: HashMap::new(),
+            pathtocost: HashMap::new(),
         }
         
     }
     
-    fn getlowestvalidpath(&mut self) -> (f32, u32){
+    fn printfullpath(&self, pathid: &u32){
+        
+        println!("this pathid: {:?} , and its nodeid: {:?}", pathid, self.pathtonode.get(&pathid).unwrap());
+        
+        println!("and its pathvalue : {:?}", self.pathtocost.get(&pathid).unwrap());
+        
+        
+        if let Some( newpathid ) = self.pathtooriginator.get(pathid){
+            
+            
+            
+            self.printfullpath(newpathid);
+            
+        }
+        else
+        {
+            
+            return( () )
+        } 
+        
+        
+        
+        
+    }
+    
+    //return all the set of connections from this node back to its predecessor
+    fn getsetofconnections(&self, pathid: &u32) -> HashSet<(u32, u32)> {
+        
+        
+        //if the current path has an originator
+        if let Some( originatorpathid ) = self.pathtooriginator.get(pathid){
+            
+            //get the hashset from all nodes up until the one before this one
+            let mut toreturn =  self.getsetofconnections(originatorpathid);
+            
+            //get the ids of the nodes theyre on and add it to the hashset
+            let originatornodeidonpathid = self.pathtonode.get(originatorpathid).unwrap();
+            let nodeidonpathid = self.pathtonode.get(pathid).unwrap();
+            
+            toreturn.insert( (*originatornodeidonpathid, *nodeidonpathid) );
+            
+            //return it
+            return(toreturn);
+        }
+        else
+        {
+            //weve got to the bottom, so return an empty hashset
+            return(HashSet::new());
+            
+            
+        }
+        
+        
+    }
+    
+    //get the node this path ends on
+    fn getnodeofpath(&self, pathid: &u32) -> u32{
+        
+        if let Some(nodeid) = self.pathtonode.get(pathid){
+            
+            *nodeid
+        }
+        else{
+            
+            panic!("path not found in the 'pathtonode' list");
+        }
+    }
+    
+    fn getlowestvalidpath(&mut self) -> Option<(f32, u32)>{
         
         self.listofpathcosts.pop()
         
@@ -1469,8 +1853,7 @@ impl ListOfPaths{
     
     
     //check if the X path preceeds or IS the Y path
-    fn doesXproceedY(&self, xpathid: &u32, ypathid: &u32 ) -> bool{
-        
+    fn doesXproceedY(&self, xpathid: &u32, ypathid: &u32 ) -> bool{        
         
         if (xpathid == ypathid){
             return(true)
@@ -1496,6 +1879,39 @@ impl ListOfPaths{
     }
     
     
+    //adding the beginning path that has no predecessor
+    fn addfirstpath(&mut self, nodeid: u32){
+        
+        //the pathvalue of the first path is 0
+        let pathvalue = 0.0;
+        
+        //now create this path, and add it to all the lists
+        let currentpathid = self.currentpathid;
+        self.currentpathid += 1;
+        
+        if let Some(curpathsonnode) = self.nodetopath.get_mut(&nodeid){
+            curpathsonnode.insert(currentpathid);
+        }
+        else{
+            let mut thehashset = HashSet::new();
+            thehashset.insert(currentpathid);
+            self.nodetopath.insert(nodeid, thehashset);
+        }
+        
+        //this path doesnt have an originator
+        //self.pathtooriginator.insert(previouspathid ,currentpathid);
+        //self.pathtopaths.get_mut(&previouspathid).unwrap().insert(currentpathid);
+        
+        self.nodetopath.get_mut(&nodeid).unwrap().insert(currentpathid);
+        self.pathtonode.insert(currentpathid, nodeid);
+        self.listofpathcosts.insert(pathvalue, currentpathid);
+        self.pathtocost.insert(currentpathid, pathvalue);
+        
+        //create a path to paths for this node
+        self.pathtopaths.insert(currentpathid, HashSet::new());
+        
+    }
+    
     //for a new path to be added
     //with its pathvalue, its progenitor path, and the node its ending on
     //this is the ONLY means and function to add a path to the list of paths
@@ -1512,11 +1928,22 @@ impl ListOfPaths{
         //get if this node can be made
         if let Some(pathsonsamenode)  = pathsonsamenodeoption{
             
-            let lowestpathcostatnode = 10000000000.0;
+            let mut lowestpathcostatnode = 100000000000.0;
+            
+            let pathidendingonsamenodeset = self.nodetopath.get(&nodeid).unwrap();
             
             //first get the path cost of the LOWEST cost path on this node
-            for pathidendingonsamenode in self.nodetopath.get(&nodeid){
-                //lowestpathcostatnode = pathidendingonsamenode.getitspathcost();   
+            for pathidendingonsamenode in pathidendingonsamenodeset{
+                
+                
+                if (self.pathtocost.get(pathidendingonsamenode).unwrap() < &lowestpathcostatnode){
+                    
+                    lowestpathcostatnode = *self.pathtocost.get(pathidendingonsamenode).unwrap();
+                    
+                }
+                
+                //println!("the value is {:?}", lowestpathcostatnode);
+                
             }
             //if this path is a lower cost than any other path ending on the node it ends on
             if ( pathvalue < lowestpathcostatnode ){
@@ -1526,8 +1953,17 @@ impl ListOfPaths{
         //if it hasnt been created yet
         else{
             //then there are no nodes for this 
-            
             canbemade = true;
+            
+        }
+        
+        
+        let mut pathvalue = pathvalue;
+        //check if for this path to be created, if this path has already visited the node that it is trying to visit now
+        if ( self.hasalreadyvisitednode(&previouspathid, &nodeid) ){
+            
+            //make the pathvalue equal to 0.01
+            pathvalue = 0.01;
             
         }
         
@@ -1536,9 +1972,14 @@ impl ListOfPaths{
         if (canbemade){
             
             
+            //if this node hasnt been created in the nodetopath map
+            if ( ! self.nodetopath.contains_key(&nodeid) ){
+                self.nodetopath.insert(nodeid, HashSet::new());
+            }
+            
             let pathidendingonsamenodeset = self.nodetopath.get(&nodeid).unwrap().clone();
-
-
+            
+            
             //if there are paths ending on this node
             //if any of these paths are NOT a part of this nodes predecessors, remove them before creating creating this new path
             
@@ -1546,13 +1987,18 @@ impl ListOfPaths{
             //for each of the paths that end on this node
             for pathidendingonsamenode in pathidendingonsamenodeset{
                 
+                //println!("pathendingonsamenode{:?} and the cur is {:?}", pathidendingonsamenode, previouspathid);
+                
                 if (self.doesXproceedY( &pathidendingonsamenode, &previouspathid)){
+                    
+                    //println!("do i proceed?");
                     
                     //if this node is a predecessor to or the previous path
                     //do nothing, you dont need to, and shouldnt remove this path before creating its successors
                     
                 }
                 else{
+                    
                     //if this node is NOT a predecessor to this new path
                     //REMOVE this node
                     self.removepathandsuccessors(&pathidendingonsamenode);
@@ -1564,30 +2010,64 @@ impl ListOfPaths{
             
             //now create this path, and add it to all the lists
             
+            let currentpathid = self.currentpathid;
+            self.currentpathid += 1;
+            
+            if let Some(curpathsonnode) = self.nodetopath.get_mut(&nodeid){
+                curpathsonnode.insert(currentpathid);
+            }
+            else{
+                let mut thehashset = HashSet::new();
+                thehashset.insert(currentpathid);
+                self.nodetopath.insert(nodeid, thehashset);
+            }
+            
+            self.pathtooriginator.insert(currentpathid ,previouspathid);
+            self.pathtopaths.get_mut(&previouspathid).unwrap().insert(currentpathid);
+            self.nodetopath.get_mut(&nodeid).unwrap().insert(currentpathid);
+            self.pathtonode.insert(currentpathid, nodeid);
+            self.listofpathcosts.insert(pathvalue, currentpathid);
+            self.pathtocost.insert(currentpathid, pathvalue);
+            
+            //create a path to paths for this node
+            self.pathtopaths.insert(currentpathid, HashSet::new());
+            
+            
         }
         
-        
-        //if there are no other paths that lead to this node, just create the node
-        
-        //else
-        {
-            //check if this path is a lower cost than ALL other paths leadings to this node
-            //if this path costs more than ANY paths ending on this node, it means that its taken
-            //a path to reach this node that is less efficient than what we already have, so it shouldnt be added
-            
-            //if the path cost is lower than ALL paths that end on this node then
-            
-            
-            //now the invariant says, SO PANIC IF THIS ISNT TRUE
-            //that there will only be ONE other path that ends on this node, which this path
-            //ISNT a progenator of
-            
-            //so remove that path, and all its sucessors
-            //self.removepathandsuccessors(pathtoremove);
-        }
         
     }
     
+    
+    //if this path or its predecessors has already visited this node
+    fn hasalreadyvisitednode(&self, pathid:&u32, nodeid:&u32) -> bool{
+        
+        
+        //get the node this path is on
+        
+        let pathsnodeid = self.pathtonode.get(pathid).unwrap();
+        
+        if (pathsnodeid == nodeid){
+            return(true)
+        }
+        else{
+            
+            
+            //if the current path has an originator
+            if let Some( originatorpathid ) = self.pathtooriginator.get(pathid){
+                
+                return( self.hasalreadyvisitednode(originatorpathid, nodeid )  )
+                
+            }
+            else
+            {
+                //return that weve got to the bottom, and it hasnt already visited this node
+                return(false)
+            }
+            
+        }        
+        
+    }
     
     
     //remove a path and all the paths that come out of it
@@ -1618,22 +2098,11 @@ impl ListOfPaths{
         
         self.pathtooriginator.remove(pathid);
         
+        //REMOVE THIS NODE FROM THE self.listofpathcosts
+        self.listofpathcosts.remove(pathid);
     }
     
     
-    
-    //FUNCTIONS
-    //get the path with the lowest pathvalue fo far
-    //get the other paths that end on this node
-    //remove this path and all the paths that spawn from this path
-    
-    
-    //get the lowest cost path
-    //create paths for all its paths
-    
-    //when creating a path
-    //check if the node its being created to is a higher cost than it
-    //if this path has a lower cost than that path, and that path isnt a progenitor of that path, remove that path and all it spawns
     
 }
 
@@ -1644,6 +2113,7 @@ struct HeapWithValue{
     //the list of the values and the nodes
     mainlist: BTreeMap< NotNan<f32> , HashSet<u32> >,
     
+    idtovalue: HashMap< u32, NotNan<f32> >,
     
 }
 
@@ -1652,50 +2122,111 @@ impl HeapWithValue{
     
     fn new() -> HeapWithValue{
         
-        HeapWithValue{ mainlist: BTreeMap::new() }
-        
+        HeapWithValue{ mainlist: BTreeMap::new(), idtovalue: HashMap::new() }
         
     }
     
     //get the pathvalue of the highest cost node, and the id of the associated node
-    fn pop(&mut self) -> ( f32 , u32 ){
+    fn pop(&mut self) -> Option<( f32 , u32 )>{
         
         
-        let ( key, _ ) = self.mainlist.last_key_value().unwrap();
-        let key = key.clone();
-        let nodeset = self.mainlist.get_mut(&key).unwrap();
-        
-        let pathvalue = key.into_inner();
-        
-        
-        let mut maybereturnnodeid : Option<u32> = None;
-        
-        //iterate through just to grab and remove one value from the nodeset
-        for curvalue in nodeset.iter(){
+        if let Some( ( key, _ ) ) = self.mainlist.first_key_value(){
             
-            maybereturnnodeid = Some(*curvalue);
+            let key = key.clone();
+            let nodeset = self.mainlist.get_mut(&key).unwrap();
             
-            break;
             
-        }
-        
-        if let Some(returnnodeid) = maybereturnnodeid{            
+            let pathvalue = key.into_inner();
             
-            nodeset.remove(&returnnodeid);
+            
+            let mut maybereturnnodeid : Option<u32> = None;
             
             if (nodeset.len() == 0){
-                self.mainlist.remove(&key);
+                
+                println!("the list{:?}", self.mainlist);
+                panic!("WHAT IS GOING ON, why is there a key to an empty set of paths");
             }
             
-            //return the pathvalue and the id of the node
-            (pathvalue, returnnodeid)
+            //iterate through just to grab and remove one value from the nodeset
+            for curvalue in nodeset.iter(){
+                
+                maybereturnnodeid = Some(*curvalue);
+                
+                
+                break;
+                
+            }
             
+            if let Some(returnnodeid) = maybereturnnodeid{            
+                
+                nodeset.remove(&returnnodeid);
+                
+                if (nodeset.len() == 0){
+                    self.mainlist.remove(&key);
+                }
+                
+                
+                //remove that removed value from the idtovalue list
+                self.idtovalue.remove(&returnnodeid);
+                
+                
+                //return the pathvalue and the id of the node
+                return( Some((pathvalue, returnnodeid)) ); 
+                
+            }
+            else{
+                
+                //return(None);
+                panic!("the return node id didnt exist in thsi set of nodes");
+            }
         }
         else{
             
-            panic!("the return node id didnt exist in thsi set of nodes");
+            return(None);
         }
         
+        
+    }
+    
+    
+    //given the id of a path/node remove that value
+    fn remove(&mut self, nodeid: &u32){
+        
+        
+        //if this path hasnt already been removed
+        if (self.idtovalue.contains_key(nodeid)){
+            
+            //use std::env;
+            //let key = "KEY";
+            //env::set_var("RUST_BACKTRACE", "1");
+            
+            //println!("before removing the path {:?}", self.mainlist);
+            
+            
+            //remove it from the idtovalue list
+            let thekey = self.idtovalue.remove(&nodeid).unwrap();
+            
+            
+            //then remove it from the mainlist
+            let idset = self.mainlist.get_mut(&thekey).unwrap();
+            
+            idset.remove(nodeid);
+            
+            //if that key for the mainlist is empty, remove it
+            if (idset.len() == 0){
+                
+                self.mainlist.remove(&thekey);
+            }
+            
+            //this is the list after removing this path
+            //println!("THIS IS THE PATHKEY:{:?}", thekey);
+            //println!("THIS IS THE PATHKEY:{:?}", nodeid);
+            
+            
+            
+            //println!("after removing the path {:?}", self.mainlist);
+            //println!("-");println!("-");println!("-");println!("-");println!("-");
+        }
         
     }
     
@@ -1713,6 +2244,8 @@ impl HeapWithValue{
         
         
         self.mainlist.get_mut(&key).unwrap().insert(nodeid);
+        
+        self.idtovalue.insert(nodeid, key);
         
         
     }
