@@ -24,6 +24,9 @@ fn main() {
     println!("Hello, world!");
     
     
+    functionalitytest();
+    /*
+    
     let mut mypathfinding = Pathfinding::new();
     
     
@@ -42,12 +45,12 @@ fn main() {
     let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);//std::f32::consts::FRAC_PI_2);
     
     let mut pathmap = HashMap::new();
-    pathmap.insert(1, 5.0);
+    pathmap.insert(1, -5.0);
     let mut entermap = HashMap::new();
     let mut exitmap = HashMap::new();
     
     
-    let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
+    mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
     
     
     
@@ -60,15 +63,15 @@ fn main() {
     ];
     
     let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
-    let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);//std::f32::consts::FRAC_PI_2);
+    let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);
     
     let mut pathmap = HashMap::new();
-    pathmap.insert(1, 500.0);
-    //let mut entermap = HashMap::new();
-    //let mut exitmap = HashMap::new();
+    pathmap.insert(1, -1.0);
+    let mut entermap = HashMap::new();
+    let mut exitmap = HashMap::new();
     
     
-    //let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
+    let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
     
     
     
@@ -78,8 +81,209 @@ fn main() {
     let mut evalmap = HashMap::new();
     evalmap.insert(1, 1.0);
     
+    mypathfinding.recalculate();
     
-    mypathfinding.getpath(10, evalmap);
+    
+    mypathfinding.getpath(30, evalmap);
+    
+    mypathfinding.drawstate();
+    */
+    
+    
+}
+
+
+
+fn functionalitytest() {
+    
+    let mut mypathfinding = Pathfinding::new();
+    
+    
+    //this is the floor everythign is on
+    
+    {
+        let points = [
+        Point2::new(0.0, 0.0),
+        Point2::new(0.0, 2000.0),
+        Point2::new(2000.0, 2000.0),
+        Point2::new(2000.0, 0.0),
+        ];
+        
+        let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+        let theisometry = Isometry2::new(Vector2::new(0.0, 0.0), 0.0);//std::f32::consts::FRAC_PI_2);
+        
+        let mut pathmap = HashMap::new();
+        let mut entermap = HashMap::new();
+        let mut exitmap = HashMap::new();
+        entermap.insert(1, 500.0);
+        
+        let leftborder = mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
+    }
+    
+    
+    //these are the border walls that everything is inside of
+    {
+        
+        let points = [
+        Point2::new(0.0, 0.0),
+        Point2::new(0.0, 10.0),
+        Point2::new(2000.0, 10.0),
+        Point2::new(2000.0, 0.0),
+        ];
+        
+        let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+        let theisometry = Isometry2::new(Vector2::new(0.0, 0.0), 0.0);//std::f32::consts::FRAC_PI_2);
+        
+        let mut pathmap = HashMap::new();
+        let mut entermap = HashMap::new();
+        let mut exitmap = HashMap::new();
+        entermap.insert(1, 1000.0);
+        
+        let leftborder = mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
+        
+    }
+    {
+        
+        let points = [
+        Point2::new(0.0, 0.0),
+        Point2::new(0.0, 10.0),
+        Point2::new(2000.0, 10.0),
+        Point2::new(2000.0, 0.0),
+        ];
+        
+        let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+        let theisometry = Isometry2::new(Vector2::new(0.0, 2000.0), 0.0);//std::f32::consts::FRAC_PI_2);
+        
+        let mut pathmap = HashMap::new();
+        let mut entermap = HashMap::new();
+        let mut exitmap = HashMap::new();
+        entermap.insert(1, 1000.0);
+        
+        let rightborder = mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
+        
+    }
+    {
+        
+        let points = [
+        Point2::new(0.0, 0.0),
+        Point2::new(0.0, 2000.0),
+        Point2::new(10.0, 2000.0),
+        Point2::new(10.0, 0.0),
+        ];
+        
+        let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+        let theisometry = Isometry2::new(Vector2::new(0.0, 0.0), 0.0);//std::f32::consts::FRAC_PI_2);
+        
+        let mut pathmap = HashMap::new();
+        let mut entermap = HashMap::new();
+        entermap.insert(1, 1000.0);
+        let mut exitmap = HashMap::new();
+        
+        
+        let topborder = mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
+        
+    }
+    {
+        
+        let points = [
+        Point2::new(0.0, 0.0),
+        Point2::new(0.0, 2000.0),
+        Point2::new(10.0, 2000.0),
+        Point2::new(10.0, 0.0),
+        ];
+        
+        let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+        let theisometry = Isometry2::new(Vector2::new(2000.0, 0.0), 0.0);//std::f32::consts::FRAC_PI_2);
+        
+        let mut pathmap = HashMap::new();
+        let mut entermap = HashMap::new();
+        entermap.insert(1, 1000.0);
+        let mut exitmap = HashMap::new();
+        
+        
+        let bottomborder = mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
+        
+    }
+    
+    
+    
+    //this is the agents shape
+    let points = [
+    Point2::new(0.0, 0.0),
+    Point2::new(0.0, 20.0),
+    Point2::new(20.0, 20.0),
+    Point2::new(20.0, 0.0),
+    ];
+    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+    let theisometry = Isometry2::new(Vector2::new(500.0, 500.0), 0.0);//std::f32::consts::FRAC_PI_2);
+    
+    let mut pathmap = HashMap::new();
+    let mut entermap = HashMap::new();
+    let mut exitmap = HashMap::new();
+    
+    let agent = mypathfinding.addshape( theshape, theisometry, pathmap, entermap, exitmap);
+    
+    
+    
+    
+    
+    
+    //this is the goal
+    let points = [
+    Point2::new(0.0, 0.0),
+    Point2::new(0.0, 20.0),
+    Point2::new(20.0, 20.0),
+    Point2::new(20.0, 0.0),
+    ];
+    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+    let theisometry = Isometry2::new(Vector2::new(500.0, 1800.0), 0.0);//std::f32::consts::FRAC_PI_2);
+    
+    let mut pathmap = HashMap::new();
+    let mut entermap = HashMap::new();
+    let mut exitmap = HashMap::new();
+    entermap.insert(1, -1000.0);
+    
+    let goal = mypathfinding.addshape( theshape, theisometry, pathmap, entermap, exitmap);
+    
+    
+    
+    
+    //some bullshit in the way
+    let points = [
+    Point2::new(0.0, 0.0),
+    Point2::new(0.0, 40.0),
+    Point2::new(900.0, 40.0),
+    Point2::new(900.0, 0.0),
+    ];
+    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
+    let theisometry = Isometry2::new(Vector2::new(200.0, 1000.0), 0.0);//std::f32::consts::FRAC_PI_2);
+    
+    let mut pathmap = HashMap::new();
+    pathmap.insert(1, 20.0);
+    let mut entermap = HashMap::new();
+    let mut exitmap = HashMap::new();
+    
+    let bullshitintheway = mypathfinding.addshape( theshape, theisometry, pathmap, entermap, exitmap);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    let mut evalmap = HashMap::new();
+    evalmap.insert(1, 1.0);
+    
+    mypathfinding.recalculate();
+    
+    
+    mypathfinding.getpathfromshape(agent, evalmap);
     
     mypathfinding.drawstate();
     
@@ -87,12 +291,114 @@ fn main() {
     
 }
 
+//holds the connections between nodeids and segmentids
+mod connectionset{
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+    
+    pub struct ConnectionSet{
+        
+        //each segment is connected to two nodes
+        segmenttonode: HashMap<u32, (u32, u32)>,
+        
+        //each node has a set of segments its connected to
+        nodetosegment: HashMap<u32, HashSet<u32>>,
+    }
+    
+    impl ConnectionSet{
+        
+        pub fn new() -> ConnectionSet{
+            
+            ConnectionSet{segmenttonode: HashMap::new(), nodetosegment: HashMap::new()}
+            
+        }
+        
+        //get the ids of the segments connected to this node
+        pub fn get_connected_segment_ids(&self, nodeid: u32) -> HashSet<u32>{
+            
+            if let Some(somehashset) = self.nodetosegment.get(&nodeid){
+                
+                somehashset.clone()
+                
+            }
+            //if this nodeid doesnt have a map to attached segments, its assumed to have none
+            else{
+                HashSet::new()
+            }
+            
+        }
+        
+        //remove this segment
+        pub fn remove_segment(&mut self, segmentid: u32){
+            
+            if ( !self.segmenttonode.contains_key(&segmentid)){
+                
+                panic!("this segmentid isnt in this connection set");
+            }
+            
+            let (node1id, node2id) = self.segmenttonode.remove(&segmentid).unwrap();
+            
+            self.nodetosegment.get_mut(&node1id).unwrap().remove(&segmentid);
+            
+            self.nodetosegment.get_mut(&node2id).unwrap().remove(&segmentid);
+            
+        }
+        
+        //removes the node with this id, panics if there are any segments attached to it
+        pub fn remove_node(&mut self, nodeid:u32){
+            
+            if (self.nodetosegment.get(&nodeid).unwrap().len() != 0){
+                
+                panic!("this node still has segments attached, cant remove it");
+                
+            }
+            else{
+                
+                self.nodetosegment.remove(&nodeid);
+            }
+            
+        }
+        
+        pub fn add_segment(&mut self, node1id: u32, node2id: u32, segmentid: u32){
+            
+            //if the map for this node doesnt exist
+            if ( ! self.nodetosegment.contains_key(&node1id) ){
+                
+                self.nodetosegment.insert(node1id, HashSet::new() );
+                
+            }
+            
+            //if the map for this node doesnt exist
+            if ( ! self.nodetosegment.contains_key(&node2id) ){
+                
+                self.nodetosegment.insert(node2id, HashSet::new() );
+                
+            }
+            
+            
+            self.segmenttonode.insert(segmentid, (node1id, node2id) );
+            
+            self.nodetosegment.get_mut(&node1id).unwrap().insert(segmentid);
+            self.nodetosegment.get_mut(&node2id).unwrap().insert(segmentid);
+            
+        }
+        
+        
+        
+        
+    }
+    
+    
+    
+}
 
 
 
-
+//TODO
+//the nodes arent far enough away from the shapes to allow connections between their outside nodes
+//that dont intersect with the shapes
 mod pathfinding{
-
+    
     use std::collections::HashMap;
     use ncollide2d::shape::Segment;
     use nalgebra::geometry::Point2;
@@ -123,7 +429,8 @@ mod pathfinding{
     use crate::addevalmaps;
     use crate::pathfindingnode::PathfindingNode;
     use crate::shapesetmanager::ShapeSetManager;
-
+    use crate::connectionset::ConnectionSet;
+    
     
     
     pub struct Pathfinding{
@@ -135,8 +442,12 @@ mod pathfinding{
         //how many nodes have ever existed, used to set id
         totalnodes: u32,
         
-
+        
         nodestorecalculate: HashSet<u32>,
+        segmentstodestroy: HashSet<u32>,
+        
+        
+        connectionset: ConnectionSet,
         
         shapemap: HashMap<u32, PathfindingShape>,
         //other data associated with shapes:
@@ -144,12 +455,10 @@ mod pathfinding{
         //the shape in the dbvt
         //the shapeset manager has a reference to its ID
         
-        
         segmentmap: HashMap<u32, PathfindingSegment>,
         //other data associated with segments:
         //both nodes have the reference to the segment that is between them
         //the shape in the dbvt
-        
         
         nodemap: HashMap<u32, PathfindingNode>,
         //other data associated with nodes:
@@ -184,14 +493,15 @@ mod pathfinding{
                 totalshapes: 0,
                 totallines: 0,
                 totalnodes:0,
-
+                
                 nodestorecalculate: HashSet::new(),
+                segmentstodestroy: HashSet::new(),
                 
                 shapemap: HashMap::new(),
                 segmentmap: HashMap::new(),
                 nodemap: HashMap::new(),
                 
-                
+                connectionset: ConnectionSet::new(),
                 
                 shapedbvt: DBVT::new(),
                 
@@ -200,18 +510,17 @@ mod pathfinding{
                 realnodedbvt: DBVT::new(),
                 
                 
-                linelengthpernode: 1200.0,
+                linelengthpernode: 300.0,
                 
                 
-                agentwidth: 55.0,
+                agentwidth: 50.0,
                 
                 
                 shapesetmanager: ShapeSetManager::new(),
                 
             }
         }
-
-
+        
         
         pub fn addshape(&mut self, shape: ConvexPolygon<f32>, pos: Isometry2<f32>, pathmap: HashMap<u32, f32>, entermap: HashMap<u32, f32> , exitmap: HashMap<u32, f32>) -> u32{
             
@@ -239,7 +548,7 @@ mod pathfinding{
             
             
             //get all the segments this shape intersects with
-            //DESTROY them
+            //set that they should be destroyed
             {
                 
                 //create a visitor
@@ -277,13 +586,9 @@ mod pathfinding{
                     //if it is intersecting
                     if (theproximity == Proximity::Intersecting ){
                         
-                        println!("WHY IS THIS APPENING");
-                        
-                        self.destroysegment( &possibleintersectid );
+                        self.segmentstodestroy.insert( possibleintersectid );
                         
                     }
-                    
-                    
                     
                     
                 }
@@ -295,9 +600,9 @@ mod pathfinding{
             
             
             
-            
             //get all the nodes this shape intersects with
             //and add to all their shapesets, this shape 
+            //and set that they should be recalculated
             {
                 
                 //create a visitor
@@ -312,10 +617,9 @@ mod pathfinding{
                 self.realnodedbvt.visit( &mut thevisitor );
                 
                 
-                
                 //check if it actually intersects
                 //if it does add this shape to its shape set
-                //then recalculate its shape set connections
+                //then set that its connections should be recalculated
                 for possibleintersectnodeid in collectedall{
                     
                     let pathnode = self.nodemap.get(&possibleintersectnodeid).expect("why is this dbvt val not in the map of nodes");
@@ -334,8 +638,8 @@ mod pathfinding{
                         
                         self.shapesetmanager.addtoshapeset(possibleintersectnodeid, shapeid);
                         
-                        println!("YO GOT HERE BITCH");
-                        self.updateconnections(possibleintersectnodeid);
+                        
+                        self.nodestorecalculate.insert(possibleintersectnodeid);
                         
                     }
                     
@@ -352,10 +656,8 @@ mod pathfinding{
             
             
             
-            let mut listofcreatednodes = HashSet::new();
-            
             //get the positions for each of the nodes that should be made
-            //and create them
+            //and create them with the "createbordernode" function
             {
                 
                 //the list of positions of nodes bases, and their normals
@@ -424,8 +726,7 @@ mod pathfinding{
                             let slerpnormal = curnormal.slerp(&nextnormal,     ((curstep + 1) as f32) / ((connectingslerps + 1) as f32) );
                             
                             
-                            let nodeposition = point2;// + ( slerpnormal.into_inner() * self.agentwidth/2.0 ) * 1.05;
-                            
+                            let nodeposition = point2;
                             
                             nodepostocreate.push( (nodeposition, slerpnormal.into_inner()) );
                             
@@ -440,59 +741,55 @@ mod pathfinding{
                     
                     let (node1id, node2id) = self.createbordernodes( nodepos , nodenormal , shapeid);
                     
-                    listofcreatednodes.insert(node1id);
-                    listofcreatednodes.insert(node2id);
                 }
                 
             }
             
             
-            for curnodeid in listofcreatednodes{
-                
-                self.updateconnections(curnodeid);
-                
-            }
             
             
             
             
             shapeid
         }
-
+        
+        
         //all the nodes marked to be recalculated are recalculated
-        fn recalculate(&mut self) {
-
-            //for every node in the list of nodes to be recalculated
-
-            for curnodeid in self.nodestorecalculate{
-
-                //first remove all the segments attached to them
-                self.destroynodeconnections(curnodeid);
-
-            }
-
+        //this recalculates their connections, not their shapesets
+        pub fn recalculate(&mut self) {
             
-            //then recalculate thew new shapeset that all of them are in (?)
-
-            //then set the connections for each of the nodes
-            for curnodeid in self.nodestorecalculate{
-                self.updateconnections(curnodeid);
+            
+            /*
+            for cursegmentid in self.segmentstodestroy.clone(){
+                
+                self.destroysegment(&cursegmentid);
+                
             }
-
-
+            */
+            
+            /*
+            for curnodeid in self.nodestorecalculate{    
+                //first remove all the segments attached to them
+                self.destroynodeconnections(&curnodeid);    
+            }
+            */
+            
+            //then set the connections for each of the nodes
+            for curnodeid in self.nodestorecalculate.clone().iter(){
+                self.updateconnections(&curnodeid.clone());
+            }
+            
+            
         }
         
-
         
         //destroy every connection thats attached to this node
         fn destroynodeconnections(&mut self, nodeid: &u32){
             
-            let mut thenode = self.nodemap.get_mut(nodeid).unwrap();
-            
-            //get every segment attached to it and destroy it
-            let mut attachedsegments = thenode.get_segment_ids();
+            let attachedsegments = self.connectionset.get_connected_segment_ids(*nodeid);
             
             for cursegmentid in attachedsegments{
+                
                 self.destroysegment( &cursegmentid );
                 
             }
@@ -503,43 +800,28 @@ mod pathfinding{
         //destroy a single segment
         fn destroysegment(&mut self, segmentid: &u32){
             
+            //remove it from the connection set object
+            self.connectionset.remove_segment(*segmentid);
             
-            //ALRIGHT
-            //IM BESTED
-            //I CANT FIGURE OUT THE ERROR
-            //I GUESS IM JUST NOT RUNNING THIS IF THE SEGMENT DOESNT EXIST
-            //WHATEVER
+            println!("the segment is : {:?}", segmentid);
+            //println!("the segment is : {:?}", self.segmentmap);
+            let thesegment = self.segmentmap.get(segmentid).unwrap();
+            //get the leafid of this segment and remove it from the dbvt
+            let dbvtleafid = thesegment.getleafid();
+            self.connectiondbvt.remove(dbvtleafid);
             
-            if let Some(thesegment) = self.segmentmap.get_mut(segmentid){
-                
-                let dbvtleafid = thesegment.getleafid();
-                
-                //get the nodes on this segment, remove this segment from their connected segments
-
-
-                let (node1id, node2id) = thesegment.getnodes();
-                
-                let mut node1 = self.nodemap.get_mut(&node1id).unwrap();
-                node1.removeattachedsegment(segmentid);
-                
-                let mut node2 = self.nodemap.get_mut(&node2id).unwrap();
-                node2.removeattachedsegment(segmentid);
-                
-                
-                
-                //remove the reference to this segment from the dbvt list
-                self.connectiondbvt.remove(dbvtleafid);
-                
-                
-                self.segmentmap.remove(segmentid);
-                
-            }
+            
+            self.segmentmap.remove(segmentid);
+            
         }
+        
+        
         
         //destroy every segment connected to this node
         //then recreate every segment for this node
-        fn updateconnections(&mut self, nodeid: u32){
+        fn updateconnections(&mut self, nodeid: &u32){
             
+            let nodeid = *nodeid;
             
             self.destroynodeconnections(&nodeid);
             
@@ -550,15 +832,15 @@ mod pathfinding{
             let thisnode = self.nodemap.get(&nodeid).unwrap();
             let thisnodepos = thisnode.getrealpoint();
             
-            //create a segment between every node in the same shape set
+            //create a segment between every node in the same shape set that doesnt intersect
             for othernodeid in thenodes{
                 
                 //get the other node
                 let othernode = self.nodemap.get(&othernodeid).unwrap();
                 let othernodepos = othernode.getrealpoint();
                 
-                
                 let shapesegment = Segment::new(thisnodepos, othernodepos);
+                
                 
                 let mut collectedall: Vec<(u32)> = Vec::new();
                 
@@ -573,6 +855,8 @@ mod pathfinding{
                 
                 //if this segment intersects with any shapes, dont create it
                 let mut validconnection = true;
+                
+                //set if the valid connection is false
                 for shapeid in collectedall{
                     
                     
@@ -607,8 +891,9 @@ mod pathfinding{
                     
                 }
                 
+                
+                //if the shape segment should be created
                 if (validconnection){
-                    
                     
                     let segmentid = self.totallines;
                     self.totallines += 1;
@@ -623,7 +908,7 @@ mod pathfinding{
                         let curshape = self.shapemap.get(&curshapeid).unwrap();
                         
                         //add the shapesevalmap to the evalmap for this connection
-                        addevalmaps(&mut connectionevalmap, &curshape.pathmap);
+                        addevalmaps(&mut connectionevalmap, &curshape.get_pathmap());
                         
                     }
                     
@@ -648,13 +933,10 @@ mod pathfinding{
                     
                     self.segmentmap.insert(segmentid, pathsegment);
                     
+                    self.connectionset.add_segment(nodeid, othernodeid, segmentid);
                     
-                    let mut thisnode = self.nodemap.get_mut(&nodeid).unwrap();
-                    thisnode.addsegment(segmentid);
                     
-                    let mut othernode = self.nodemap.get_mut(&othernodeid).unwrap();
-                    othernode.addsegment(segmentid);
-                    
+                    //println!("segment ID CREATED: {:?}", segmentid);
                 }
                 
                 
@@ -678,16 +960,8 @@ mod pathfinding{
                 
                 
                 
-                //get the other node
-                //get the evalmap of going from node 1 to 2 and node 2 to 1
-                
                 let (othernodeid, nodetoothercostmap, othertonodecostmap) = theshape.getnodeandcostmap(&nodeid);
                 
-                //what data is assocaited with the creation of a segment?
-                
-                //self.segmentmap
-                //self.nodemap all the nodes have a reference to the segmentid between them and another node
-                //self.connectiondbvt for a shape for the segment
                 
                 
                 let thisnodepos = thisnode.getrealpoint();
@@ -718,21 +992,13 @@ mod pathfinding{
                     othertonodecostmap
                 );
                 
-                self.segmentmap.insert(nodeid, pathsegment);
+                
+                self.segmentmap.insert(segmentid, pathsegment);
+                
+                self.connectionset.add_segment(nodeid, othernodeid, segmentid);
                 
                 
-                //RIGHT NOw the issue is that for some reason, segments are being attached to nodes which
-                //are not connected to them, find out why
-                //or are being given the wrong node ids for the nodes theyre attached to
-                
-                
-                
-                let mut thisnode = self.nodemap.get_mut(&nodeid).unwrap();
-                thisnode.addsegment(segmentid);
-                
-                let mut othernode = self.nodemap.get_mut(&othernodeid).unwrap();
-                othernode.addsegment(segmentid);
-                
+                //println!("segment ID SAMENODECON CREATED: {:?}", segmentid);
                 
             }
             
@@ -740,6 +1006,8 @@ mod pathfinding{
             
             
         }
+        
+        
         
         //create two nodes on the edge of a shape, one outside, one inside
         fn createbordernodes(&mut self, nodebase: Point2<f32>, nodenormal: Vector2<f32>, shapeid: u32) -> (u32, u32){        
@@ -751,17 +1019,18 @@ mod pathfinding{
             self.totalnodes += 1;
             
             
+            //create the nodes
             let mut thepathfindinginsidenode = PathfindingNode::newonshape(nodebase, nodenormal, shapeid);
             let mut thepathfindingoutsidenode = PathfindingNode::newonshape(nodebase, nodenormal, shapeid);
-            
             
             //make a real node for the two nodes at the agentwidth distance
             let realpoint = thepathfindinginsidenode.createreal(self.agentwidth / 1.9 );
             let realpoint = thepathfindingoutsidenode.createreal(self.agentwidth / 1.9 );
             
-            //add it to this objects map of the nodes
+            //add it to the map of the nodes
             self.nodemap.insert( insidenodeid, thepathfindinginsidenode );
             self.nodemap.insert( outsidenodeid, thepathfindingoutsidenode );
+            
             
             
             //get the shape its on
@@ -796,6 +1065,7 @@ mod pathfinding{
             self.realnodedbvt.insert(theleaf);
             
             
+            
             //get the shapes that both of these nodes intersects with 
             let mut nodeshapeset = self.getshapeintersection(&nodeiso, &nodeshape);
             
@@ -806,15 +1076,19 @@ mod pathfinding{
             self.shapesetmanager.addnode(outsidenodeid, nodeshapeset);
             
             
+            //set that these nodes should have their connections calculate
+            self.nodestorecalculate.insert(insidenodeid);
+            self.nodestorecalculate.insert(outsidenodeid);
+            
+            //return the nodes
             (insidenodeid, outsidenodeid)
             
             
         }
-
-
-
-
-
+        
+        
+        
+        
         //return the lists of shapepath ids that this shape intersects with (works with nodes)
         fn getshapeintersection(&self, isometry: &Isometry2<f32>, shape: &dyn Shape<f32>) -> BTreeSet<u32>{
             
@@ -856,7 +1130,9 @@ mod pathfinding{
             toreturn
             
         }
-
+        
+        
+        
         //draws all of the shapes and all of the nodes and all of the connections
         //done
         pub fn drawstate(&self){
@@ -873,10 +1149,10 @@ mod pathfinding{
             
             
             //fill the list and set the background colour
-            for y in 0..ysize{
+            for _y in 0..ysize{
                 
                 let mut thisrow: Vec<(u8,u8,u8)> = Vec::new();
-                for x in 0..xsize{
+                for _x in 0..xsize{
                     thisrow.push((70,10,10));
                 }
                 imageoutput.push(thisrow);
@@ -947,25 +1223,39 @@ mod pathfinding{
             image::save_buffer("statedrawn.png", &buffer, xsize as u32, ysize as u32, image::ColorType::Rgb8).unwrap();
             
             
-        }        
+        }
+        
+        
+        //get a node on the shape, and then call "get path" with that node
+        pub fn getpathfromshape(&self, shapeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
+            
+            //get a random node inside the shape
+            
+            let theshape = self.shapemap.get(&shapeid).unwrap();
+            
+            let nodeid = theshape.get_node_inside();
+            
+            self.getpath(nodeid, evalmap)
+            
+        }
         
         //get the path
         pub fn getpath(&self, nodeid: u32, evalmap: HashMap< u32, f32>) -> Vec< Point2<f32> >{
             
             //the list of paths
-            let mut listofpaths: ListOfPaths = ListOfPaths::new();
+            let mut listofpaths: ListOfPaths = ListOfPaths::new(&self.shapesetmanager);
             
             listofpaths.addfirstpath(nodeid);
             
             
-            //how do I know when im done?
-            //cuz this just runs on forever
-            
             //gets the lowest value valid path
             let mut thelowestpath = 0;
+            let mut thelowestpathvalue = 90000.0;
             
             
-            for x in 0..100000{
+            for _x in 0..1500{
+                
+                println!("loop number {:?}", _x);
                 
                 //store the cost of the last node, so i know at the end, what
                 //the minimum value path is
@@ -973,52 +1263,43 @@ mod pathfinding{
                 
                 if let Some( (pathcost, pathid) ) = listofpaths.getlowestvalidpath(){
                     
-                    
-                    //println!("cost, then id, {:?}, {:?}", pathcost, pathid);
-                    
-                    thelowestpath = pathid;
-                    
-                    
+                    if (pathcost < thelowestpathvalue){
+                        
+                        thelowestpath = pathid;
+                        
+                        thelowestpathvalue = pathcost;
+                        
+                    }
                     
                     
                     //get the node that this path ends on
                     
                     let currentnodeid = listofpaths.getnodeofpath( &pathid );
                     
-                    //println!("This is the current node {:?}", currentnodeid);
-                    
-                    
-                    
-                    //get all the segments attached to the current node
-                    
-                    //get the list of segments leaving this node
-                    let currentnode = self.nodemap.get(&currentnodeid).unwrap();
                     
                     //get the segmentids attached to this node
-                    let setofsegmentsattached = currentnode.get_segment_ids();
+                    let setofsegmentsattached = self.connectionset.get_connected_segment_ids(currentnodeid);
                     
+                    //println!("set of segments attached: {:?}", setofsegmentsattached);
                     
                     for cursegmentid in setofsegmentsattached{
                         
-                        //println!("the segment attached to this node{:?}", cursegmentid);
                         
-                        //ALRIGHT. I LOST TODO FIX THIS
-                        //BUT RIGHT NOW, IM JUST SKIPPING IF THE SEGMENT DOESNT EXIST
-                        //I KEEP GETTING ERRORS, PROBLEMS WITH MY SEGMENTS NOT ACTUALLY EXISTING
-                        //SINCE I MADE THE "CREATEINSIDE/OUTSIDE NODES" FUNCTION
-                        //get the segment
-                        if let Some( cursegment) = self.segmentmap.get(&cursegmentid){
-                            
-                            //for this segment, get the node on the other end, along with the value of it
-                            let (newnodeid, curpathvalue) = cursegment.getothernodeandvalue(&currentnodeid, &evalmap);
-                            
-                            //println!("the node the segment is attached to and value{:?}, + {:?}", curpathvalue, newnodeid);
-                            
-                            let newpathvalue = curpathvalue + pathcost;
-                            
-                            //add this to the list of paths
-                            listofpaths.addpath(newpathvalue, pathid, newnodeid);
-                        }
+                        let cursegment = self.segmentmap.get(&cursegmentid).unwrap();
+                        
+                        //for this segment, get the node on the other end, along with the value of it
+                        let (newnodeid, curpathvalue) = cursegment.getothernodeandvalue(&currentnodeid, &evalmap);
+                        
+                        //println!("cursegment is:{:?}", cursegment);
+                        //println!("and value is:{:?}", curpathvalue);
+                        
+                        //println!("the node the segment is attached to and value{:?}, + {:?}", curpathvalue, newnodeid);
+                        
+                        let newpathvalue = curpathvalue + pathcost;
+                        
+                        //add this to the list of paths
+                        listofpaths.addpath(newpathvalue, pathid, newnodeid);
+                        
                     }
                     
                 }
@@ -1032,17 +1313,7 @@ mod pathfinding{
             //print the list of paths taken from the origin node to get to this one
             listofpaths.printfullpath(&thelowestpath);
             
-            
-            
-            
-            listofpaths.printfullpath(&thelowestpath);
-            
             self.drawfullpath(  &listofpaths, &thelowestpath );
-            
-            
-            
-            
-            
             
             Vec::new()
             
@@ -1063,8 +1334,8 @@ mod pathfinding{
             
             let leftedge = -100;
             let topedge = -100;
-            let bottomedge = 1500;
-            let rightedge = 1500;
+            let bottomedge = 2200;
+            let rightedge = 2200;
             
             let xsize = rightedge - leftedge;
             let ysize = bottomedge - topedge;
@@ -1129,7 +1400,7 @@ mod pathfinding{
             //iterate through the connections again for the coloured ones
             for (_, cursegment) in self.segmentmap.iter(){
                 
-
+                
                 let (node1id, node2id) = cursegment.getnodes();
                 let mut thecolour = (200,200,100);
                 
@@ -1205,7 +1476,6 @@ mod pathfinding{
             loop{
                 
                 
-                
                 if let Some(pathbeforeid) = pathtooriginator.get(currentpathid){
                     
                     currentpathid = pathbeforeid;
@@ -1227,8 +1497,8 @@ mod pathfinding{
             
         }
         
-
-
+        
+        
     }
     
     
@@ -1337,16 +1607,18 @@ mod pathfinding{
 
 
 
+//each 
+
 //list of paths requires on heapwithvalue
 mod listofpaths{
     use std::collections::HashMap;
     
     use std::collections::HashSet;
     use crate::heapwithvalue::HeapWithValue;
+    use crate::shapesetmanager::ShapeSetManager;
     
     
-    
-    pub struct ListOfPaths{
+    pub struct ListOfPaths<'a>{
         
         currentpathid: u32,
         
@@ -1366,10 +1638,12 @@ mod listofpaths{
         
         //the map of the costs of each path
         pathtocost: HashMap<u32, f32>,
+
+        shapesetmanager: &'a ShapeSetManager,
         
     }
     
-    impl ListOfPaths{
+    impl ListOfPaths<'_>{
         //IMPORTANT INVARIANT
         /*
         AT ANY TIME, THERE CAN ONLY BE ONE CHAIN OF PATHS THAT ARE ON A NODE
@@ -1377,7 +1651,7 @@ mod listofpaths{
         OR MULTIPLE PATHS THAT END ON IT, ONLY WHEN THOSE PATHS ARE A PART OF THE SAME CHAIN
         (THERE CAN ONLY BE ONE PATH ENDING ON A NODE, WHO DOES NOT HAVE PROGENITORS THAT END ON THE SAME NODE)
         */
-        pub fn new() -> ListOfPaths{
+        pub fn new(shapesetmanager: &ShapeSetManager) -> ListOfPaths{
             
             ListOfPaths{
                 currentpathid:0,
@@ -1387,6 +1661,7 @@ mod listofpaths{
                 listofpathcosts: HeapWithValue::new(),
                 pathtopaths: HashMap::new(),
                 pathtocost: HashMap::new(),
+                shapesetmanager: shapesetmanager,
             }
             
         }
@@ -1394,7 +1669,7 @@ mod listofpaths{
         pub fn printfullpath(&self, pathid: &u32){
             
             
-            
+            /*
             println!("This is it to node{:?}", self.pathtonode);
             
             println!("");
@@ -1405,8 +1680,8 @@ mod listofpaths{
             println!("This is the paths to its cost{:?}", self.pathtocost);
             println!("");
             
-            
-            println!("this pathid: {:?} , and its nodeid: {:?}", pathid, self.pathtonode.get(&pathid).unwrap());
+            */
+            println!("this pathid: {:?}", pathid);
             
             println!("and its pathvalue : {:?}", self.pathtocost.get(&pathid).unwrap());
             
@@ -1701,6 +1976,76 @@ mod listofpaths{
             
         }
         
+        
+        //if this node has already entered this shape
+        //and something if its already exited this shape
+        /*
+        the problem is that I need to know what shapevalues to subtract from the things that have already been visited
+
+        so like, if im going to be entering the same shape twice, i want only that shape im entering's value to decrease
+        not all of the shapes
+
+
+        //a shape has a map of its influences that together form what is called a "evalmap"/"entermap"/"exitmap
+
+        //so each segment has a list of influences also
+        //and each influence can be affected by the things that the shapes that the pathfinders path has took to get here
+
+
+        //so each influence can have things like:
+        //decreases in its value the furhter you go away from it
+        //the further youve traveled since youve been on it
+        //some influences are higher valued depending on the current amount of each influence you have
+
+        //associated with the current path isnt the "pathvalue" its the "pathvalue" and then also its list of influences so far
+        
+
+        //if there are some tiles that are like
+        //"poison vunerability"
+        //then the planning for the route taken should be
+        //
+
+
+
+
+        each segment doesnt have 
+
+
+
+
+        */
+        fn hasalreadyenteredshape(&self, pathid:&u32, shapeid:&u32) -> bool{
+
+            //get if this shape
+            
+            
+            //get the node this path is on
+            
+            let pathsnodeid = self.pathtonode.get(pathid).unwrap();
+            
+            if (pathsnodeid == nodeid){
+                return(true)
+            }
+            else{
+                
+                
+                //if the current path has an originator
+                if let Some( originatorpathid ) = self.pathtooriginator.get(pathid){
+                    
+                    return( self.hasalreadyvisitednode(originatorpathid, nodeid )  )
+                    
+                }
+                else
+                {
+                    //return that weve got to the bottom, and it hasnt already visited this node
+                    return(false)
+                }
+                
+            }        
+            
+        }
+
+        
         //remove a path and all the paths that come out of it
         //(do this when the path to this node is being replaced with a path that is better)
         fn removepathandsuccessors(&mut self, pathid: &u32 ){
@@ -1723,9 +2068,14 @@ mod listofpaths{
             
             self.pathtopaths.remove(pathid);
             
-            let nodeid = self.pathtonode.remove(pathid).unwrap();
             
-            self.nodetopath.get_mut(&nodeid).unwrap().remove(pathid);
+            
+            if let Some(nodeid) = self.pathtonode.remove(pathid){
+                
+                self.nodetopath.get_mut(&nodeid).unwrap().remove(pathid);
+                
+            }
+            
             
             self.pathtooriginator.remove(pathid);
             
@@ -2057,9 +2407,9 @@ mod shapesetmanager{
 mod pathfindingshape{
     use std::collections::HashMap;
     use ncollide2d::shape::ConvexPolygon;
-
+    
     use nalgebra::Isometry2;
-
+    
     #[derive(Debug)]
     pub struct PathfindingShape{
         
@@ -2108,6 +2458,25 @@ mod pathfindingshape{
             
         }
         
+        pub fn get_pathmap(&self) -> HashMap<u32, f32>{
+            
+            self.pathmap.clone()
+            
+            
+        }
+        
+        //get an arbitrary nodeid that is inside of this shape
+        pub fn get_node_inside(&self) -> u32{
+            
+            for (insidenodeid, outsidenodeid)  in self.insidetooutsidemap.iter(){
+                
+                return(*insidenodeid);
+            }
+            
+            panic!("why does this shape not have inside / outside nodes?");
+            
+        }
+        
         //return the node , as well as the costmap to go from this node to that node, and that node to this node
         pub fn getnodeandcostmap(&self, node1: &u32) -> (u32, HashMap<u32, f32>, HashMap<u32, f32> ){
             
@@ -2125,28 +2494,28 @@ mod pathfindingshape{
             panic!("this node isnt on this shape");
             
         }
-
+        
         pub fn getposition(&self) -> Isometry2<f32>{
             self.pos
         }
         
         pub fn getshape(&self) -> ConvexPolygon<f32>{
-            self.shape
+            self.shape.clone()
         }
-
+        
     }
 }
 
 
 //pathfinding segment requires no other mods
 mod pathfindingsegment{
-
+    
     use nalgebra::Point2;
     use ncollide2d::shape::Segment;
     use ncollide2d::partitioning::DBVTLeafId;
     use crate::getevaluation;
     use std::collections::HashMap;
-
+    
     #[derive(Debug)]
     pub struct PathfindingSegment{
         
@@ -2166,7 +2535,14 @@ mod pathfindingsegment{
     
     impl PathfindingSegment{
         
-        pub fn new(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, evalmap: HashMap<u32, f32>) -> PathfindingSegment{
+        pub fn new(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, mut evalmap: HashMap<u32, f32>) -> PathfindingSegment{
+            
+            //get the length of the segment
+            let segmentlength = thesegment.length();
+            
+            //multiple the evalmap by the length of the segment
+            scaleevalmap(&mut evalmap, segmentlength);
+            
             
             PathfindingSegment{
                 segment: thesegment,
@@ -2226,38 +2602,54 @@ mod pathfindingsegment{
             
             
         }
-
+        
         //return a tuple of the nodeids in an arbitrary order
         pub fn getnodes(&self) -> (u32, u32){
-
+            
             (self.node1id, self.node2id)
         }
-
+        
         ///get the leafid that corresponds to this segments leaf on the segmentdbvt
         pub fn getleafid(&self) -> DBVTLeafId{
-
+            
             self.leafid
-
+            
         }
-
+        
         //get the ncollide2d segment that represents this segments shape
         pub fn getshapesegment(&self) -> Segment<f32>{
             self.segment.clone()
         }
-
-
+        
+        
         //get the points this segments shape ends at
         pub fn getendpoints(&self) -> (Point2<f32> , Point2<f32>){
-
-
+            
+            
             (*self.segment.a(), *self.segment.b())
-
+            
         }
         
         
     }
     
+    
+    
+    fn scaleevalmap(evalmap: &mut HashMap<u32, f32>, scalefactor: f32) {
+        
+        
+        //for each of the values in evalmap2
+        for (id, value) in evalmap.iter_mut(){
+            
+            *value = *value * scalefactor;
+            
+        }
+        
+    }
+    
+    
 }
+
 
 
 
@@ -2266,7 +2658,7 @@ mod pathfindingnode{
     use std::collections::HashSet;
     use nalgebra::Point2;
     use nalgebra::Vector2;
-
+    
     #[derive(Debug)]
     pub struct PathfindingNode{
         
@@ -2281,11 +2673,6 @@ mod pathfindingnode{
         //in the positive direction is going away from the shape/line
         //in the negative direction its going inside of the shape
         linenormal: Vector2<f32>,
-        
-        
-        //a list of all ids of the segments that this node is on an end of
-        attachedsegmentids: HashSet<u32>,
-        
         
         //the shape it might be on
         optionshapeon: Option<u32>,
@@ -2305,16 +2692,10 @@ mod pathfindingnode{
                 
                 linenormal: linenormal,
                 
-                attachedsegmentids: HashSet::new(),
-                
                 optionshapeon: None,
                 
             }
             
-        }
-        
-        pub fn removeattachedsegment(&mut self, attachedsegmentid: &u32){
-            self.attachedsegmentids.remove(attachedsegmentid);
         }
         
         pub fn newonshape( basepoint: Point2<f32>, linenormal: Vector2<f32>, shapetobeon: u32 ) -> PathfindingNode{
@@ -2327,23 +2708,21 @@ mod pathfindingnode{
                 
                 linenormal: linenormal,
                 
-                attachedsegmentids: HashSet::new(),
-                
                 optionshapeon: Some(shapetobeon),
                 
             }
             
         }
-
+        
         pub fn getrealpoint(&self) -> Point2<f32>{
             self.realpoint
         }
         
         //return if and what shapeid its on
         pub fn getshapeidon(&self)-> Option<u32>{
-
+            
             self.optionshapeon
-
+            
         }
         
         //given a distance from the base, create a real node at that distance
@@ -2353,17 +2732,6 @@ mod pathfindingnode{
             self.realpoint = self.basepoint + self.linenormal * distancefrombase;
             
             self.realpoint
-            
-        }
-        
-        pub fn addsegment(&mut self, segmentid: u32){
-            self.attachedsegmentids.insert(segmentid);
-        }
-        
-        //get a list of the segment ids of all the segments for this node
-        pub fn get_segment_ids(&self) -> HashSet<u32>{
-            
-            self.attachedsegmentids.clone()
             
         }
         
