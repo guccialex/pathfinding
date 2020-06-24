@@ -94,7 +94,6 @@ mod statetype{
     }
 }
 
-
 mod influencetype{
     
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -106,10 +105,6 @@ mod influencetype{
         
     }
 }
-
-
-
-
 
 //an influence that affects an agentstatemap
 mod influencemap{
@@ -162,8 +157,6 @@ mod influencemap{
     
     
 }
-
-
 
 //an agent state map, what the state of the agent is
 mod agentstatemap{

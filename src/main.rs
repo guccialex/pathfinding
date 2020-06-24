@@ -1,11 +1,8 @@
-
-
 #![allow(unused_parens)]
 #![feature(map_first_last)]
-//#[allow(unused_parens)]
+
+
 use std::collections::HashMap;
-
-
 use nalgebra::geometry::Point2;
 use nalgebra::Isometry2;
 use ncollide2d::shape::ConvexPolygon;
@@ -25,70 +22,6 @@ fn main() {
     
     
     functionalitytest();
-    /*
-    
-    let mut mypathfinding = Pathfinding::new();
-    
-    
-    
-    
-    
-    
-    let points = [
-    Point2::new(-3.0, -2.0),
-    Point2::new(-3.0, 1225.0),
-    Point2::new(1225.0, 1225.0),
-    Point2::new(1225.0, -2.0),
-    ];
-    
-    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
-    let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);//std::f32::consts::FRAC_PI_2);
-    
-    let mut pathmap = HashMap::new();
-    pathmap.insert(1, -5.0);
-    let mut entermap = HashMap::new();
-    let mut exitmap = HashMap::new();
-    
-    
-    mypathfinding.addshape( theshape.clone(), theisometry, pathmap.clone(), entermap, exitmap);
-    
-    
-    
-    
-    let points = [
-    Point2::new(200.0, 200.0),
-    Point2::new(203.0, 925.0),
-    Point2::new(925.0, 925.0),
-    Point2::new(925.0, 202.0),
-    ];
-    
-    let theshape = ConvexPolygon::try_from_points(&points).expect("Convex hull computation failed.");
-    let theisometry = Isometry2::new(Vector2::new(50.0, 50.0), 0.0);
-    
-    let mut pathmap = HashMap::new();
-    pathmap.insert(1, -1.0);
-    let mut entermap = HashMap::new();
-    let mut exitmap = HashMap::new();
-    
-    
-    let shape1 = mypathfinding.addshape( theshape, theisometry, pathmap.clone(), entermap, exitmap);
-    
-    
-    
-    
-    
-    
-    let mut evalmap = HashMap::new();
-    evalmap.insert(1, 1.0);
-    
-    mypathfinding.recalculate();
-    
-    
-    mypathfinding.getpath(30, evalmap);
-    
-    mypathfinding.drawstate();
-    */
-    
     
 }
 
@@ -394,6 +327,10 @@ mod connectionset{
 
 
 
+
+
+
+
 //TODO
 //the nodes arent far enough away from the shapes to allow connections between their outside nodes
 //that dont intersect with the shapes
@@ -431,14 +368,22 @@ mod pathfinding{
     use crate::shapesetmanager::ShapeSetManager;
     use crate::connectionset::ConnectionSet;
     
+
+
+
     
     
     pub struct Pathfinding{
         
         //how many shapes have ever existed, used to set pathfindingshapeid
         totalshapes: u32,
-        //how many lines have ever existed, used to set id
+
+        //how many lines have ever existed, used to set id of shape segments
         totallines: u32,
+
+        //how many pathsegments have existed, used to set id of pathfinding segments
+        totalsegments: u32,
+
         //how many nodes have ever existed, used to set id
         totalnodes: u32,
         
@@ -758,21 +703,6 @@ mod pathfinding{
         //this recalculates their connections, not their shapesets
         pub fn recalculate(&mut self) {
             
-            
-            /*
-            for cursegmentid in self.segmentstodestroy.clone(){
-                
-                self.destroysegment(&cursegmentid);
-                
-            }
-            */
-            
-            /*
-            for curnodeid in self.nodestorecalculate{    
-                //first remove all the segments attached to them
-                self.destroynodeconnections(&curnodeid);    
-            }
-            */
             
             //then set the connections for each of the nodes
             for curnodeid in self.nodestorecalculate.clone().iter(){
@@ -2090,166 +2020,6 @@ mod listofpaths{
 }
 
 
-//heapwith value requires no other mods
-mod heapwithvalue{
-    
-    use ordered_float::NotNan;
-    
-    use std::collections::BTreeMap;
-    
-    
-    use std::collections::HashMap;
-    
-    use std::collections::HashSet;
-    
-    
-    //this is a heap that has associated with it
-    pub struct HeapWithValue{
-        
-        //the list of the values and the nodes
-        mainlist: BTreeMap< NotNan<f32> , HashSet<u32> >,
-        
-        idtovalue: HashMap< u32, NotNan<f32> >,
-        
-    }
-    
-    
-    impl HeapWithValue{
-        
-        pub fn new() -> HeapWithValue{
-            
-            HeapWithValue{ mainlist: BTreeMap::new(), idtovalue: HashMap::new() }
-            
-        }
-        
-        //get the pathvalue of the highest cost node, and the id of the associated node
-        pub fn pop(&mut self) -> Option<( f32 , u32 )>{
-            
-            
-            if let Some( ( key, _ ) ) = self.mainlist.first_key_value(){
-                
-                let key = key.clone();
-                let nodeset = self.mainlist.get_mut(&key).unwrap();
-                
-                
-                let pathvalue = key.into_inner();
-                
-                
-                let mut maybereturnnodeid : Option<u32> = None;
-                
-                if (nodeset.len() == 0){
-                    
-                    println!("the list{:?}", self.mainlist);
-                    panic!("WHAT IS GOING ON, why is there a key to an empty set of paths");
-                }
-                
-                //iterate through just to grab and remove one value from the nodeset
-                for curvalue in nodeset.iter(){
-                    
-                    maybereturnnodeid = Some(*curvalue);
-                    
-                    
-                    break;
-                    
-                }
-                
-                if let Some(returnnodeid) = maybereturnnodeid{            
-                    
-                    nodeset.remove(&returnnodeid);
-                    
-                    if (nodeset.len() == 0){
-                        self.mainlist.remove(&key);
-                    }
-                    
-                    
-                    //remove that removed value from the idtovalue list
-                    self.idtovalue.remove(&returnnodeid);
-                    
-                    
-                    //return the pathvalue and the id of the node
-                    return( Some((pathvalue, returnnodeid)) ); 
-                    
-                }
-                else{
-                    
-                    //return(None);
-                    panic!("the return node id didnt exist in thsi set of nodes");
-                }
-            }
-            else{
-                
-                return(None);
-            }
-            
-            
-        }
-        
-        
-        //given the id of a path/node remove that value
-        pub fn remove(&mut self, nodeid: &u32){
-            
-            
-            //if this path hasnt already been removed
-            if (self.idtovalue.contains_key(nodeid)){
-                
-                //use std::env;
-                //let key = "KEY";
-                //env::set_var("RUST_BACKTRACE", "1");
-                
-                //println!("before removing the path {:?}", self.mainlist);
-                
-                
-                //remove it from the idtovalue list
-                let thekey = self.idtovalue.remove(&nodeid).unwrap();
-                
-                
-                //then remove it from the mainlist
-                let idset = self.mainlist.get_mut(&thekey).unwrap();
-                
-                idset.remove(nodeid);
-                
-                //if that key for the mainlist is empty, remove it
-                if (idset.len() == 0){
-                    
-                    self.mainlist.remove(&thekey);
-                }
-                
-                //this is the list after removing this path
-                //println!("THIS IS THE PATHKEY:{:?}", thekey);
-                //println!("THIS IS THE PATHKEY:{:?}", nodeid);
-                
-                
-                
-                //println!("after removing the path {:?}", self.mainlist);
-                //println!("-");println!("-");println!("-");println!("-");println!("-");
-            }
-            
-        }
-        
-        
-        //add in the nodeid with its associated pathvalue
-        pub fn insert( &mut self, pathvalue: f32 , nodeid: u32 ){
-            
-            let key = NotNan::new( pathvalue ).expect("nan error");
-            
-            //check if it doesnt exist, make it first
-            if (! self.mainlist.contains_key(&key)){
-                
-                self.mainlist.insert(key, HashSet::new());
-            }
-            
-            
-            self.mainlist.get_mut(&key).unwrap().insert(nodeid);
-            
-            self.idtovalue.insert(nodeid, key);
-            
-            
-        }
-        
-        
-        
-    }
-}
 
 //shapeset manager requires no other mods
 mod shapesetmanager{
@@ -2401,9 +2171,7 @@ mod shapesetmanager{
     
 }
 
-
-
-//pathfinding shape requires no other mods
+//pathfinding shape requires influencemap
 mod pathfindingshape{
     use std::collections::HashMap;
     use ncollide2d::shape::ConvexPolygon;
@@ -2506,16 +2274,16 @@ mod pathfindingshape{
     }
 }
 
-
-//pathfinding segment requires no other mods
+//pathfinding segment requires influencemap
 mod pathfindingsegment{
     
     use nalgebra::Point2;
     use ncollide2d::shape::Segment;
     use ncollide2d::partitioning::DBVTLeafId;
-    use crate::getevaluation;
     use std::collections::HashMap;
-    
+    use crate::influencemap::InfluenceMap;
+
+
     #[derive(Debug)]
     pub struct PathfindingSegment{
         
@@ -2527,9 +2295,9 @@ mod pathfindingsegment{
         
         leafid: DBVTLeafId,
         
-        evalmap1to2: HashMap<u32, f32>,
+        influencemap1to2: InfluenceMap,
         
-        evalmap2to1: HashMap<u32, f32>,
+        influencemap2to1: InfluenceMap,
         
     }
     
@@ -2567,8 +2335,8 @@ mod pathfindingsegment{
             }
         }
         
-        //given a node to start at, get the cost to get to the other end, and the node it ends at
-        pub fn getothernodeandvalue(&self, thisnodeid: &u32, agentevalmap: &HashMap<u32, f32>) -> (u32, f32){
+        //given a node to start at, get the influence map to get to the other end, and the node it ends at
+        pub fn getothernodeandvalue(&self, thisnodeid: &u32) -> (u32, f32){
             
             if (*thisnodeid == self.node1id){
                 (self.node2id, getevaluation(&self.evalmap1to2, agentevalmap ) )
@@ -2582,26 +2350,7 @@ mod pathfindingsegment{
             }
             
         }
-        
-        //given a nodeid of one of the nodes on this, return the id of the other node of this segment
-        fn getothernode(&self, thisnodeid: &u32) -> u32{
-            
-            if (*thisnodeid == self.node1id){
-                
-                self.node2id
-                
-            }
-            else if ( *thisnodeid == self.node2id ) {
-                
-                self.node1id
-                
-            }
-            else{
-                panic!("this segment doesnt have this nodeid at all")
-            }
-            
-            
-        }
+
         
         //return a tuple of the nodeids in an arbitrary order
         pub fn getnodes(&self) -> (u32, u32){
@@ -2624,7 +2373,6 @@ mod pathfindingsegment{
         
         //get the points this segments shape ends at
         pub fn getendpoints(&self) -> (Point2<f32> , Point2<f32>){
-            
             
             (*self.segment.a(), *self.segment.b())
             
@@ -2649,6 +2397,7 @@ mod pathfindingsegment{
     
     
 }
+
 
 
 
@@ -2742,24 +2491,200 @@ mod pathfindingnode{
 
 
 
-//TEST THIS
-//given two evalmaps, add the second one to the first one
-pub fn addevalmaps(evalmap1: &mut HashMap<u32, f32>, evalmap2: &HashMap<u32, f32>) {
+
+
+
+
+//a struct that you can store f32 that maps to u32
+//and then pop to get the u32 with the highest f32 that hasnt been popped yet
+mod heapwithvalue{
     
-    //for each of the values in evalmap2
-    for (id2, value2) in evalmap2.iter(){
+    
+    use ordered_float::NotNan;
+    use std::collections::BTreeMap;
+    
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+    
+    
+    
+    
+    //this is a heap that has associated with it
+    pub struct HeapWithValue{
         
-        //if the evalmap1 has this curid value
-        if let Some(value1) = evalmap1.get_mut(id2){
+        //the list of the values and the nodes
+        mainlist: BTreeMap< NotNan<f32> , HashSet<u32> >,
+        
+    }
+    
+    
+    impl HeapWithValue{
+        
+        pub fn new() -> HeapWithValue{
             
-            //add this value to it
-            *value1 += value2;
+            HeapWithValue{ mainlist: BTreeMap::new()}
             
         }
-        else{
+        
+        //get the id with the highest value and remove it from the list
+        pub fn pop(&mut self) -> Option<( f32 , u32 )>{
             
-            //otherwise create it with the evalmap1 value and put it in
-            evalmap1.insert(*id2, *value2);
+            //if the list is empty, return None
+            if (self.mainlist.is_empty()){
+                
+                return(None);
+            }
+            else{
+                
+                //get the id and the value
+                let (lastkey, _) = self.mainlist.last_key_value().unwrap();
+                
+                let lastkey = lastkey.clone();
+                let idset = self.mainlist.get_mut(&lastkey).unwrap();
+                
+                
+                let value = lastkey.into_inner();
+                
+                
+                let mut maybereturnid : Option<u32> = None;
+                
+                if (idset.len() == 0){
+                    
+                    panic!("WHAT IS GOING ON, why is there a key to an empty set of paths");
+                }
+                
+                //iterate through just to grab and remove one value from the nodeset
+                for curvalue in idset.iter(){
+                    
+                    maybereturnid = Some(*curvalue);
+                    
+                    break;
+                }
+                
+                if let Some(returnid) = maybereturnid{            
+                    
+                    idset.remove(&returnid);
+                    
+                    if (idset.len() == 0){
+                        self.mainlist.remove(&lastkey);
+                    }
+                    
+                    
+                    
+                    //return the pathvalue and the id of the node
+                    return( Some((value, returnid)) ); 
+                    
+                }
+                else{
+                    
+                    panic!("the return node id didnt exist in thsi set of nodes");
+                }
+                
+                
+            }
+            
+            
+            
+            
+            
+        }
+        
+        
+        
+        //insert a u32 with its associated value
+        pub fn insert( &mut self, value: f32 , id: u32 ){
+            
+            let key = NotNan::new( value ).expect("nan error");
+            
+            //check if it doesnt exist, make it first
+            if (! self.mainlist.contains_key(&key)){
+                
+                self.mainlist.insert(key, HashSet::new());
+            }
+            
+            
+            self.mainlist.get_mut(&key).unwrap().insert(id);
+            
+        }
+        
+        
+        
+    }
+}
+
+mod statetype{
+    
+    #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+    pub enum StateType{
+        
+        Timetaken,
+        Health,
+        Mana,
+        Speed,
+        DamageTo(u32),
+        HealthOf(u32),
+        NonSpecificGoal,
+        
+        
+    }
+}
+
+mod influencetype{
+    
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    pub enum InfluenceType{
+        
+        Distance,
+        NonSpecificGoal
+        
+        
+    }
+}
+
+//an influence that affects an agentstatemap
+mod influencemap{
+    
+    //the map of the influences
+    //this is whats stored in the 
+    use std::collections::HashMap;
+    use crate::influencetype::InfluenceType;
+    use crate::agentstatemap::AgentStateMap;
+    use crate::statetype::StateType;
+    
+    pub struct InfluenceMap{
+        
+        pub mainmap: HashMap< InfluenceType ,f32 >,
+        
+    }
+    
+    impl InfluenceMap{
+        
+        pub fn new() -> InfluenceMap{
+            
+            InfluenceMap{mainmap: HashMap::new()}
+            
+        }
+        
+        //apply this influence map to an AgentState
+        pub fn apply_to_state(&self, agentstatemap: &mut AgentStateMap){
+            
+            
+            
+            for (influencetype, value) in self.mainmap.iter(){
+                
+                
+                if influencetype == &InfluenceType::Distance{
+                    
+                    let speedvalue = agentstatemap.get_value( &StateType::Speed);
+                    
+                    let deltatime = value / speedvalue;
+                    
+                    agentstatemap.add_to_value( &StateType::Speed, deltatime);
+                    
+                }        
+            }
+            
+            
         }
         
         
@@ -2768,24 +2693,95 @@ pub fn addevalmaps(evalmap1: &mut HashMap<u32, f32>, evalmap2: &HashMap<u32, f32
     
 }
 
-
-//given two evalmaps, get the total evalulation as a number
-pub fn getevaluation(evalmap1: &HashMap< u32, f32> , evalmap2: &HashMap< u32, f32> ) -> f32{
+//an agent state map, what the state of the agent is
+mod agentstatemap{
     
-    let mut totalvalue: f32 = 0.0;
+    use crate::statetype::StateType;
+    use std::collections::HashMap;
     
-    //for every id and value in evalmap1
-    for (id1, value1) in evalmap1.iter(){
+    
+    #[derive(Clone)]
+    pub struct AgentStateMap{
         
-        //if evalmap2 also has this value
-        if let Some(value2) = evalmap2.get(id1){
-            
-            totalvalue += value1 * value2;
-            
-        }
+        pub mainmap: HashMap<StateType, f32>,
         
     }
     
-    totalvalue
+    impl AgentStateMap{
+        
+        pub fn new() -> AgentStateMap{
+            
+            AgentStateMap{mainmap: HashMap::new()}
+            
+        }
+        
+        //get a value that doesnt have multiple values
+        pub fn get_value(&self, statetype: &StateType) -> f32{
+            
+            
+            let value = self.mainmap.get(statetype).unwrap();
+            
+            
+            *value
+            
+        }
+        
+        pub fn add_to_value(&mut self, statetype: &StateType, value: f32){
+            
+            let mut statevalue = self.mainmap.get_mut(statetype).unwrap();
+            
+            *statevalue += value;
+            
+            
+        }
+        
+        
+        pub fn get_state_score(&self) -> f32{
+            
+            let mut returnscore = 0.0;
+            
+            //how much to multiply the end returnscore by
+            let mut multfactor = 1.0;
+            
+            
+            for (statetype, value) in self.mainmap.iter(){
+                
+                if statetype == &StateType::Timetaken{
+                    
+                    multfactor = multfactor / value;
+                    
+                }
+                else if statetype == &StateType::Health{
+                    
+                    returnscore += value;
+                    
+                }
+                else if statetype == &StateType::Mana{
+                    
+                    returnscore += value;
+                    
+                }
+                else if let StateType::DamageTo(id) = statetype{
+                    
+                    returnscore += value;
+                    
+                }
+                else{
+                    panic!("uncaught statetype {:?}", statetype);
+                }
+                
+                
+                
+            }
+            
+            
+            returnscore * multfactor
+            
+            
+        }
+        
+        
+    }
+    
+    
 }
-
