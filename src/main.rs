@@ -10,6 +10,14 @@ use nalgebra::Vector2;
 
 
 
+mod connectionset;
+mod influencemap;
+mod agentstatemap;
+mod heapwithvalue;
+mod pathfindingsegment;
+
+
+use influencemap::InfluenceMap;
 
 
 
@@ -225,107 +233,30 @@ fn functionalitytest() {
 }
 
 //holds the connections between nodeids and segmentids
-mod connectionset{
-    use std::collections::HashMap;
-    use std::collections::HashSet;
-    
-    pub struct ConnectionSet{
-        
-        //each segment is connected to two nodes
-        segmenttonode: HashMap<u32, (u32, u32)>,
-        
-        //each node has a set of segments its connected to
-        nodetosegment: HashMap<u32, HashSet<u32>>,
+
+fn addevalmaps(evalmap1: &mut HashMap<u32, f32>, evalmap2: &HashMap<u32, f32>) {
+
+    //for each of the values in evalmap2
+    for (id2, value2) in evalmap2.iter(){
+
+        //if the evalmap1 has this curid value
+        if let Some(value1) = evalmap1.get_mut(id2){
+
+            //add this value to it
+            *value1 += value2;
+
+        }
+        else{
+
+            //otherwise create it with the evalmap1 value and put it in
+            evalmap1.insert(*id2, *value2);
+        }
+
+
     }
-    
-    impl ConnectionSet{
-        
-        pub fn new() -> ConnectionSet{
-            
-            ConnectionSet{segmenttonode: HashMap::new(), nodetosegment: HashMap::new()}
-            
-        }
-        
-        //get the ids of the segments connected to this node
-        pub fn get_connected_segment_ids(&self, nodeid: u32) -> HashSet<u32>{
-            
-            if let Some(somehashset) = self.nodetosegment.get(&nodeid){
-                
-                somehashset.clone()
-                
-            }
-            //if this nodeid doesnt have a map to attached segments, its assumed to have none
-            else{
-                HashSet::new()
-            }
-            
-        }
-        
-        //remove this segment
-        pub fn remove_segment(&mut self, segmentid: u32){
-            
-            if ( !self.segmenttonode.contains_key(&segmentid)){
-                
-                panic!("this segmentid isnt in this connection set");
-            }
-            
-            let (node1id, node2id) = self.segmenttonode.remove(&segmentid).unwrap();
-            
-            self.nodetosegment.get_mut(&node1id).unwrap().remove(&segmentid);
-            
-            self.nodetosegment.get_mut(&node2id).unwrap().remove(&segmentid);
-            
-        }
-        
-        //removes the node with this id, panics if there are any segments attached to it
-        pub fn remove_node(&mut self, nodeid:u32){
-            
-            if (self.nodetosegment.get(&nodeid).unwrap().len() != 0){
-                
-                panic!("this node still has segments attached, cant remove it");
-                
-            }
-            else{
-                
-                self.nodetosegment.remove(&nodeid);
-            }
-            
-        }
-        
-        pub fn add_segment(&mut self, node1id: u32, node2id: u32, segmentid: u32){
-            
-            //if the map for this node doesnt exist
-            if ( ! self.nodetosegment.contains_key(&node1id) ){
-                
-                self.nodetosegment.insert(node1id, HashSet::new() );
-                
-            }
-            
-            //if the map for this node doesnt exist
-            if ( ! self.nodetosegment.contains_key(&node2id) ){
-                
-                self.nodetosegment.insert(node2id, HashSet::new() );
-                
-            }
-            
-            
-            self.segmenttonode.insert(segmentid, (node1id, node2id) );
-            
-            self.nodetosegment.get_mut(&node1id).unwrap().insert(segmentid);
-            self.nodetosegment.get_mut(&node2id).unwrap().insert(segmentid);
-            
-        }
-        
-        
-        
-        
-    }
-    
-    
-    
+
+
 }
-
-
 
 
 
@@ -363,7 +294,9 @@ mod pathfinding{
     
     use crate::pathfindingshape::PathfindingShape;
     use crate::pathfindingsegment::PathfindingSegment;
+    
     use crate::addevalmaps;
+
     use crate::pathfindingnode::PathfindingNode;
     use crate::shapesetmanager::ShapeSetManager;
     use crate::connectionset::ConnectionSet;
@@ -438,6 +371,7 @@ mod pathfinding{
                 totalshapes: 0,
                 totallines: 0,
                 totalnodes:0,
+                totalsegments: 0,
                 
                 nodestorecalculate: HashSet::new(),
                 segmentstodestroy: HashSet::new(),
@@ -1944,6 +1878,7 @@ mod listofpaths{
 
 
         */
+        /*
         fn hasalreadyenteredshape(&self, pathid:&u32, shapeid:&u32) -> bool{
 
             //get if this shape
@@ -1974,6 +1909,7 @@ mod listofpaths{
             }        
             
         }
+        */
 
         
         //remove a path and all the paths that come out of it
@@ -2274,131 +2210,6 @@ mod pathfindingshape{
     }
 }
 
-//pathfinding segment requires influencemap
-mod pathfindingsegment{
-    
-    use nalgebra::Point2;
-    use ncollide2d::shape::Segment;
-    use ncollide2d::partitioning::DBVTLeafId;
-    use std::collections::HashMap;
-    use crate::influencemap::InfluenceMap;
-
-
-    #[derive(Debug)]
-    pub struct PathfindingSegment{
-        
-        //the id of the two nodes this segment is between
-        node1id: u32,
-        node2id: u32,
-        
-        segment: Segment<f32>,
-        
-        leafid: DBVTLeafId,
-        
-        influencemap1to2: InfluenceMap,
-        
-        influencemap2to1: InfluenceMap,
-        
-    }
-    
-    impl PathfindingSegment{
-        
-        pub fn new(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, mut evalmap: HashMap<u32, f32>) -> PathfindingSegment{
-            
-            //get the length of the segment
-            let segmentlength = thesegment.length();
-            
-            //multiple the evalmap by the length of the segment
-            scaleevalmap(&mut evalmap, segmentlength);
-            
-            
-            PathfindingSegment{
-                segment: thesegment,
-                leafid: dbvtleafid,
-                node1id: node1id,
-                node2id: node2id,
-                evalmap1to2: evalmap.clone(),
-                evalmap2to1: evalmap
-            }
-        }
-        
-        //create a new pathfinding segment where the direction of the path matters
-        pub fn newdirectional(thesegment: Segment<f32>, dbvtleafid: DBVTLeafId, node1id: u32, node2id: u32, evalmap1to2: HashMap<u32, f32>, evalmap2to1: HashMap<u32, f32>) -> PathfindingSegment{
-            
-            PathfindingSegment{
-                segment: thesegment,
-                leafid: dbvtleafid,
-                node1id: node1id,
-                node2id: node2id,
-                evalmap1to2: evalmap1to2,
-                evalmap2to1: evalmap2to1
-            }
-        }
-        
-        //given a node to start at, get the influence map to get to the other end, and the node it ends at
-        pub fn getothernodeandvalue(&self, thisnodeid: &u32) -> (u32, f32){
-            
-            if (*thisnodeid == self.node1id){
-                (self.node2id, getevaluation(&self.evalmap1to2, agentevalmap ) )
-                
-            }
-            else if ( *thisnodeid == self.node2id ) {
-                (self.node1id, getevaluation(&self.evalmap2to1, agentevalmap ) )
-            }
-            else{
-                panic!("this segment doesnt have this nodeid at all, why?");
-            }
-            
-        }
-
-        
-        //return a tuple of the nodeids in an arbitrary order
-        pub fn getnodes(&self) -> (u32, u32){
-            
-            (self.node1id, self.node2id)
-        }
-        
-        ///get the leafid that corresponds to this segments leaf on the segmentdbvt
-        pub fn getleafid(&self) -> DBVTLeafId{
-            
-            self.leafid
-            
-        }
-        
-        //get the ncollide2d segment that represents this segments shape
-        pub fn getshapesegment(&self) -> Segment<f32>{
-            self.segment.clone()
-        }
-        
-        
-        //get the points this segments shape ends at
-        pub fn getendpoints(&self) -> (Point2<f32> , Point2<f32>){
-            
-            (*self.segment.a(), *self.segment.b())
-            
-        }
-        
-        
-    }
-    
-    
-    
-    fn scaleevalmap(evalmap: &mut HashMap<u32, f32>, scalefactor: f32) {
-        
-        
-        //for each of the values in evalmap2
-        for (id, value) in evalmap.iter_mut(){
-            
-            *value = *value * scalefactor;
-            
-        }
-        
-    }
-    
-    
-}
-
-
 
 
 
@@ -2495,122 +2306,6 @@ mod pathfindingnode{
 
 
 
-//a struct that you can store f32 that maps to u32
-//and then pop to get the u32 with the highest f32 that hasnt been popped yet
-mod heapwithvalue{
-    
-    
-    use ordered_float::NotNan;
-    use std::collections::BTreeMap;
-    
-    use std::collections::HashMap;
-    use std::collections::HashSet;
-    
-    
-    
-    
-    //this is a heap that has associated with it
-    pub struct HeapWithValue{
-        
-        //the list of the values and the nodes
-        mainlist: BTreeMap< NotNan<f32> , HashSet<u32> >,
-        
-    }
-    
-    
-    impl HeapWithValue{
-        
-        pub fn new() -> HeapWithValue{
-            
-            HeapWithValue{ mainlist: BTreeMap::new()}
-            
-        }
-        
-        //get the id with the highest value and remove it from the list
-        pub fn pop(&mut self) -> Option<( f32 , u32 )>{
-            
-            //if the list is empty, return None
-            if (self.mainlist.is_empty()){
-                
-                return(None);
-            }
-            else{
-                
-                //get the id and the value
-                let (lastkey, _) = self.mainlist.last_key_value().unwrap();
-                
-                let lastkey = lastkey.clone();
-                let idset = self.mainlist.get_mut(&lastkey).unwrap();
-                
-                
-                let value = lastkey.into_inner();
-                
-                
-                let mut maybereturnid : Option<u32> = None;
-                
-                if (idset.len() == 0){
-                    
-                    panic!("WHAT IS GOING ON, why is there a key to an empty set of paths");
-                }
-                
-                //iterate through just to grab and remove one value from the nodeset
-                for curvalue in idset.iter(){
-                    
-                    maybereturnid = Some(*curvalue);
-                    
-                    break;
-                }
-                
-                if let Some(returnid) = maybereturnid{            
-                    
-                    idset.remove(&returnid);
-                    
-                    if (idset.len() == 0){
-                        self.mainlist.remove(&lastkey);
-                    }
-                    
-                    
-                    
-                    //return the pathvalue and the id of the node
-                    return( Some((value, returnid)) ); 
-                    
-                }
-                else{
-                    
-                    panic!("the return node id didnt exist in thsi set of nodes");
-                }
-                
-                
-            }
-            
-            
-            
-            
-            
-        }
-        
-        
-        
-        //insert a u32 with its associated value
-        pub fn insert( &mut self, value: f32 , id: u32 ){
-            
-            let key = NotNan::new( value ).expect("nan error");
-            
-            //check if it doesnt exist, make it first
-            if (! self.mainlist.contains_key(&key)){
-                
-                self.mainlist.insert(key, HashSet::new());
-            }
-            
-            
-            self.mainlist.get_mut(&key).unwrap().insert(id);
-            
-        }
-        
-        
-        
-    }
-}
 
 mod statetype{
     
@@ -2639,149 +2334,4 @@ mod influencetype{
         
         
     }
-}
-
-//an influence that affects an agentstatemap
-mod influencemap{
-    
-    //the map of the influences
-    //this is whats stored in the 
-    use std::collections::HashMap;
-    use crate::influencetype::InfluenceType;
-    use crate::agentstatemap::AgentStateMap;
-    use crate::statetype::StateType;
-    
-    pub struct InfluenceMap{
-        
-        pub mainmap: HashMap< InfluenceType ,f32 >,
-        
-    }
-    
-    impl InfluenceMap{
-        
-        pub fn new() -> InfluenceMap{
-            
-            InfluenceMap{mainmap: HashMap::new()}
-            
-        }
-        
-        //apply this influence map to an AgentState
-        pub fn apply_to_state(&self, agentstatemap: &mut AgentStateMap){
-            
-            
-            
-            for (influencetype, value) in self.mainmap.iter(){
-                
-                
-                if influencetype == &InfluenceType::Distance{
-                    
-                    let speedvalue = agentstatemap.get_value( &StateType::Speed);
-                    
-                    let deltatime = value / speedvalue;
-                    
-                    agentstatemap.add_to_value( &StateType::Speed, deltatime);
-                    
-                }        
-            }
-            
-            
-        }
-        
-        
-    }
-    
-    
-}
-
-//an agent state map, what the state of the agent is
-mod agentstatemap{
-    
-    use crate::statetype::StateType;
-    use std::collections::HashMap;
-    
-    
-    #[derive(Clone)]
-    pub struct AgentStateMap{
-        
-        pub mainmap: HashMap<StateType, f32>,
-        
-    }
-    
-    impl AgentStateMap{
-        
-        pub fn new() -> AgentStateMap{
-            
-            AgentStateMap{mainmap: HashMap::new()}
-            
-        }
-        
-        //get a value that doesnt have multiple values
-        pub fn get_value(&self, statetype: &StateType) -> f32{
-            
-            
-            let value = self.mainmap.get(statetype).unwrap();
-            
-            
-            *value
-            
-        }
-        
-        pub fn add_to_value(&mut self, statetype: &StateType, value: f32){
-            
-            let mut statevalue = self.mainmap.get_mut(statetype).unwrap();
-            
-            *statevalue += value;
-            
-            
-        }
-        
-        
-        pub fn get_state_score(&self) -> f32{
-            
-            let mut returnscore = 0.0;
-            
-            //how much to multiply the end returnscore by
-            let mut multfactor = 1.0;
-            
-            
-            for (statetype, value) in self.mainmap.iter(){
-                
-                if statetype == &StateType::Timetaken{
-                    
-                    multfactor = multfactor / value;
-                    
-                }
-                else if statetype == &StateType::Health{
-                    
-                    returnscore += value;
-                    
-                }
-                else if statetype == &StateType::Mana{
-                    
-                    returnscore += value;
-                    
-                }
-                else if let StateType::DamageTo(id) = statetype{
-                    
-                    returnscore += value;
-                    
-                }
-                else{
-                    panic!("uncaught statetype {:?}", statetype);
-                }
-                
-                
-                
-            }
-            
-            
-            returnscore * multfactor
-            
-            
-        }
-        
-        
-    }
-    
-    
 }
